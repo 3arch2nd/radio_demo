@@ -858,21 +858,21 @@ const pageHistory = [];
 const MAX_HISTORY_SIZE = 5;
 
 
-let textSizeMode = 'small'; 
-let isRepeatScrolling = false; 
+let textSizeMode = 'small'; 
+let isRepeatScrolling = false; 
 
 let scrollWatchTimer = null;
-const SCROLL_SPEED = 5;        
+const SCROLL_SPEED = 5;        
 const MIN_SCROLL_SEC = 8;
 const MAX_SCROLL_SEC = 70;
 
-let storyData = []; 
-let originalApprovedStories = []; // 💡 전체 승인된 사연을 저장할 배열 추가
-let approvedUnplayedCount = 0; 
-let currentPlayOrder = 0; 
-let currentStoryIndex = -1; // 💡 -1로 초기화 (재생 목록의 인덱스)
-let playMode = 'random'; 
-let player = null; 
+let storyData = []; 
+let originalTotalStories = 0; 
+let approvedUnplayedCount = 0; 
+let currentPlayOrder = 0; 
+let currentStoryIndex = -1;
+let playMode = 'random'; 
+let player = null; 
 
 let lastStartedRowNum = null;
 let lastStartedStamp = 0;
@@ -880,1217 +880,1119 @@ let lastStartedStamp = 0;
 let loadingInterval = null;
 
 function looksLikeCommonEmailTypo(domain) {
-    const obviousTypos = [
-        'gmal.com', 'gmai.com', 'gmaii.com', 'gmail.co', 'gmail.con',
-        'naver.net', 'nvaer.com', 'naver.co',
-        'daum.com',
-        'kako.com', 'kakao.co'
-    ];
-    return obviousTypos.includes(domain);
+    const obviousTypos = [
+        'gmal.com', 'gmai.com', 'gmaii.com', 'gmail.co', 'gmail.con',
+        'naver.net', 'nvaer.com', 'naver.co',
+        'daum.com',
+        'kako.com', 'kakao.co'
+    ];
+    return obviousTypos.includes(domain);
 }
 
 function isEmailAllowed(value) {
-    if (!value) return false;
-    const t = value.trim();
-    const basicPattern = /^[^@]+@[^@]+\.[^@]+$/;
-    if (!basicPattern.test(t)) return false;
+    if (!value) return false;
+    const t = value.trim();
+    const basicPattern = /^[^@]+@[^@]+\.[^@]+$/;
+    if (!basicPattern.test(t)) return false;
 
-    const domain = t.split('@')[1].toLowerCase();
-    if (looksLikeCommonEmailTypo(domain)) return false;
+    const domain = t.split('@')[1].toLowerCase();
+    if (looksLikeCommonEmailTypo(domain)) return false;
 
-    const common = [
-        'gmail.com', 'naver.com', 'daum.net', 'kakao.com',
-        'outlook.com', 'hotmail.com'
-    ];
-    if (common.includes(domain)) return true;
+    const common = [
+        'gmail.com', 'naver.com', 'daum.net', 'kakao.com',
+        'outlook.com', 'hotmail.com'
+    ];
+    if (common.includes(domain)) return true;
 
-    const allowEnds = [
-        '.kr', '.go.kr', '.or.kr', '.sch.kr', '.es.kr', '.ms.kr', '.hs.kr', '.korea.kr'
-    ];
-    if (allowEnds.some(sfx => domain.endsWith(sfx))) return true;
+    const allowEnds = [
+        '.kr', '.go.kr', '.or.kr', '.sch.kr', '.es.kr', '.ms.kr', '.hs.kr', '.korea.kr'
+    ];
+    if (allowEnds.some(sfx => domain.endsWith(sfx))) return true;
 
-    return true;
+    return true;
 }
 
 async function callWorker(action, data = {}) {
-    try {
-        const response = await fetch(WORKER_API_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, ...data })
-        });
+    try {
+        const response = await fetch(WORKER_API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, ...data })
+        });
 
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => ({ message: '알 수 없는 서버 응답 형식' }));
-            throw new Error(`HTTP ${response.status}: ${errorBody.message || response.statusText}`);
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Worker 통신 실패:', error);
-        return { success: false, message: `서버 통신 오류: ${error.message}` };
-    }
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({ message: '알 수 없는 서버 응답 형식' }));
+            throw new Error(`HTTP ${response.status}: ${errorBody.message || response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Worker 통신 실패:', error);
+        return { success: false, message: `서버 통신 오류: ${error.message}` };
+    }
 }
 
 function startLoadingAnimation(baseMessage) {
-    stopLoadingAnimation();
-    let dots = 1;
-    const loadingTitle = 'loading';
-    loadingInterval = setInterval(() => {
-        let dotString = '.'.repeat(dots);
-        frequencyDisplay.textContent = `[${loadingTitle}] ${baseMessage}${dotString}`;
-        dots++;
-        if (dots > 3) dots = 1;
-    }, 500);
+    stopLoadingAnimation();
+    let dots = 1;
+    const loadingTitle = 'loading';
+    loadingInterval = setInterval(() => {
+        let dotString = '.'.repeat(dots);
+        frequencyDisplay.textContent = `[${loadingTitle}] ${baseMessage}${dotString}`;
+        dots++;
+        if (dots > 3) dots = 1;
+    }, 500);
 }
 function stopLoadingAnimation() {
-    if (loadingInterval) {
-        clearInterval(loadingInterval);
-        loadingInterval = null;
-    }
+    if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+    }
 }
 
 function showModal(title, pin, password, emailFailed = false) {
-    const msgEl = document.getElementById('modalMessage');
-    if (emailFailed) {
-        msgEl.innerHTML = '사연 보내기 및 관리자 로그인을 위해<br>다음 정보를 꼭 저장해 주세요!<br><br><strong style="color:#c62828;">※ 이메일이 발송되지 않았어요. 아래 PIN/비번을 꼭 캡처해 두세요.</strong>';
-    } else {
-        msgEl.innerHTML = '사연 보내기 및 관리자 로그인을 위해<br>다음 정보를 꼭 저장해 주세요!';
-    }
+    const msgEl = document.getElementById('modalMessage');
+    if (emailFailed) {
+        msgEl.innerHTML = '사연 보내기 및 관리자 로그인을 위해<br>다음 정보를 꼭 저장해 주세요!<br><br><strong style="color:#c62828;">※ 이메일이 발송되지 않았어요. 아래 PIN/비번을 꼭 캡처해 두세요.</strong>';
+    } else {
+        msgEl.innerHTML = '사연 보내기 및 관리자 로그인을 위해<br>다음 정보를 꼭 저장해 주세요!';
+    }
 
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalPin').textContent = pin;
-    document.getElementById('modalPassword').textContent =
-        (password && String(password).trim() !== '')
-            ? password
-            : '(처음 입력한 4자리 비밀번호를 사용하세요)';
-    document.getElementById('resultModalOverlay').classList.add('show');
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalPin').textContent = pin;
+    document.getElementById('modalPassword').textContent =
+        (password && String(password).trim() !== '')
+            ? password
+            : '(처음 입력한 4자리 비밀번호를 사용하세요)';
+    document.getElementById('resultModalOverlay').classList.add('show');
 }
 function closeModal() {
-    document.getElementById('resultModalOverlay').classList.remove('show');
-    loadContent('manage_menu');
+    document.getElementById('resultModalOverlay').classList.remove('show');
+    loadContent('manage_menu');
 }
 
 function initFontToggleListeners() {
-    const sm = document.getElementById('fontSmallBtn');
-    const lg = document.getElementById('fontLargeBtn');
-    if (!sm || !lg) return;
-    sm.classList.toggle('active', textSizeMode === 'small');
-    lg.classList.toggle('active', textSizeMode === 'large');
+    const sm = document.getElementById('fontSmallBtn');
+    const lg = document.getElementById('fontLargeBtn');
+    if (!sm || !lg) return;
+    sm.classList.toggle('active', textSizeMode === 'small');
+    lg.classList.toggle('active', textSizeMode === 'large');
 
-    sm.onclick = () => setTextSize('small');
-    lg.onclick = () => setTextSize('large');
+    sm.onclick = () => setTextSize('small');
+    lg.onclick = () => setTextSize('large');
 }
 function setTextSize(mode) {
-    textSizeMode = (mode === 'large') ? 'large' : 'small';
-    const sm = document.getElementById('fontSmallBtn');
-    const lg = document.getElementById('fontLargeBtn');
-    if (sm && lg) {
-        sm.classList.toggle('active', textSizeMode === 'small');
-        lg.classList.toggle('active', textSizeMode === 'large');
-    }
-    applyTextSize(true);
+    textSizeMode = (mode === 'large') ? 'large' : 'small';
+    const sm = document.getElementById('fontSmallBtn');
+    const lg = document.getElementById('fontLargeBtn');
+    if (sm && lg) {
+        sm.classList.toggle('active', textSizeMode === 'small');
+        lg.classList.toggle('active', textSizeMode === 'large');
+    }
+    applyTextSize(true);
 }
 function applyTextSize(preserveProgress) {
-    const el = document.getElementById('scrollingText');
-    if (!el) return;
+    const el = document.getElementById('scrollingText');
+    if (!el) return;
 
-    let savedTime = null;
-    let anim = null;
-    if (el.getAnimations) { // 💡 Animation API 사용 여부 체크
-        const animations = el.getAnimations();
-        anim = animations.length > 0 ? animations[0] : null;
+    let savedTime = null;
+    let anim = null;
+    if (preserveProgress && el.getAnimations) {
+        anim = el.getAnimations()[0];
+        if (anim && anim.currentTime != null) savedTime = anim.currentTime;
+    }
 
-        if (preserveProgress && anim && anim.currentTime != null && anim.playState === 'running') {
-            savedTime = anim.currentTime;
-            anim.pause(); // 일시 중지하여 위치 저장
-        }
-    }
+    el.classList.remove('size-small', 'size-large');
+    el.classList.add(textSizeMode === 'large' ? 'size-large' : 'size-small');
 
-
-    el.classList.remove('size-small', 'size-large');
-    el.classList.add(textSizeMode === 'large' ? 'size-large' : 'size-small');
-
-    // 💡 CSS 변수 업데이트를 위한 재시작
-    el.style.animation = 'none';
-    
-    setTimeout(() => {
-        if (savedTime !== null && anim) {
-            setScrollAnimationDuration(el); // 새로운 글자 크기에 맞춰 지속 시간 재계산
-            
-            const newAnim = el.getAnimations()[0];
-            if (newAnim) {
-                newAnim.currentTime = savedTime; // 저장된 시간으로 복원 시도
-                newAnim.play();
-            } else {
-                restartCurrentScrolling(); // 애니메이션이 없으면 그냥 재시작
-            }
-        } else {
-            restartCurrentScrolling(); // 초기 로딩 또는 재생 중이 아니면 그냥 재시작
-        }
-    }, 10);
+    if (savedTime !== null && anim) {
+        try { anim.currentTime = savedTime; } catch (e) {}
+    }
 }
 
 function getChannelTitle(page) {
-    switch (page) {
-        case 'listen': return 'ON AIR';
-        case 'write': return '사연 보내기';
-        case 'manage_menu':
-        case 'create_channel':
-        case 'login_manage_stories':
-        case 'login_listen':
-        case 'list_stories':
-            return '관리자';
-        case 'qrcode': return 'QR 코드';
-        default: return '라디오는 사연을 싣고';
-    }
+    switch (page) {
+        case 'listen': return 'ON AIR';
+        case 'write': return '사연 보내기';
+        case 'manage_menu':
+        case 'create_channel':
+        case 'login_manage_stories':
+        case 'login_listen':
+        case 'list_stories':
+            return '관리자';
+        case 'qrcode': return 'QR 코드';
+        default: return '라디오는 사연을 싣고';
+    }
 }
 
 function loadContent(page, skipHistory = false) {
-    let html = '';
+    let html = '';
 
-    stopLoadingAnimation();
+    stopLoadingAnimation();
 
-    if (!skipHistory) {
-        if (pageHistory.length === 0 || pageHistory[pageHistory.length - 1] !== page) {
-            pageHistory.push(page);
-            if (pageHistory.length > MAX_HISTORY_SIZE) pageHistory.shift();
-        }
-        history.replaceState({ page: page }, null, `#${page}`);
-    }
+    if (!skipHistory) {
+        if (pageHistory.length === 0 || pageHistory[pageHistory.length - 1] !== page) {
+            pageHistory.push(page);
+            if (pageHistory.length > MAX_HISTORY_SIZE) pageHistory.shift();
+        }
+        history.replaceState({ page: page }, null, `#${page}`);
+    }
 
-    if (page === 'welcome') {
-        frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
-    } else {
-        frequencyDisplay.textContent = `[${getChannelTitle(page)}] 채널`;
-    }
+    if (page === 'welcome') {
+        frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
+    } else {
+        frequencyDisplay.textContent = `[${getChannelTitle(page)}] 채널`;
+    }
 
-    switch (page) {
-        case 'welcome':
-            html = `
-                <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
-                <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
-                <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
-                <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
-            `;
-            break;
+    switch (page) {
+        case 'welcome':
+            html = `
+                <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
+                <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
+                <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
+                <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
+            `;
+            break;
 
-        case 'listen':
-            if (!currentChannelPin || !currentChannelName) {
-                html = `<p style="color: red;">🎶 사연 보기는 관리자 채널 로그인 후 접근할 수 있습니다. 🔑</p>`;
-            } else {
-                html = `
-                    <div class="story-player-area">
-                        <div class="scroll-text-box">
-                            <h2 class="content-title">🎶 사연 보기</h2>
-                            <p id="playerArea" style="margin-top: 10px;">재생 버튼을 눌러주세요.</p>
-                            <div class="story-scroll-container">
-                                <p id="scrollingText" class="story-text-scrolling size-${textSizeMode}" style="animation:none; top:100%;"></p>
-                            </div>
-                        </div>
-                        <div class="youtube-panel">
-                            <div class="playback-controls">
-                                <button id="repeatScrollBtn" class="icon-button ${isRepeatScrolling ? 'is-on' : ''}" title="사연 반복 재생" onclick="toggleRepeatScrolling(this)">&#8634;</button>
-                                <button class="icon-button" title="순차 재생" onclick="playStories('sequential')">&#9654;</button>
-                                <button class="icon-button" title="랜덤 재생" onclick="playStories('random')">&#8644;</button>
-                                <div class="font-toggle">
-                                    <button id="fontSmallBtn" class="font-btn ${textSizeMode === 'small' ? 'active' : ''}">a</button>
-                                    <button id="fontLargeBtn" class="font-btn ${textSizeMode === 'large' ? 'active' : ''}">A</button>
-                                </div>
-                            </div>
-                            <div id="currentStoryInfo"></div>
-                            <div class="youtube-box">
-                                <div id="youtubePlayer"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            break;
+        case 'listen':
+            if (!currentChannelPin || !currentChannelName) {
+                html = `<p style="color: red;">🎶 사연 보기는 관리자 채널 로그인 후 접근할 수 있습니다. 🔑</p>`;
+            } else {
+                html = `
+                    <div class="story-player-area">
+                        <div class="scroll-text-box">
+                            <h2 class="content-title">🎶 사연 보기</h2>
+                            <p id="playerArea" style="margin-top: 10px;">재생 버튼을 눌러주세요.</p>
+                            <div class="story-scroll-container">
+                                <p id="scrollingText" class="story-text-scrolling size-${textSizeMode}" style="animation:none; top:100%;"></p>
+                            </div>
+                        </div>
+                        <div class="youtube-panel">
+                            <div class="playback-controls">
+                                <button id="repeatScrollBtn" class="icon-button ${isRepeatScrolling ? 'is-on' : ''}" title="사연 반복 재생" onclick="toggleRepeatScrolling(this)">&#8634;</button>
+                                <button class="icon-button" title="순차 재생" onclick="playStories('sequential')">&#9654;</button>
+                                <button class="icon-button" title="랜덤 재생" onclick="playStories('random')">&#8644;</button>
+                                <div class="font-toggle">
+                                    <button id="fontSmallBtn" class="font-btn ${textSizeMode === 'small' ? 'active' : ''}">a</button>
+                                    <button id="fontLargeBtn" class="font-btn ${textSizeMode === 'large' ? 'active' : ''}">A</button>
+                                </div>
+                            </div>
+                            <div id="currentStoryInfo"></div>
+                            <div class="youtube-box">
+                                <div id="youtubePlayer"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            break;
 
-        case 'write':
-        case 'pin_entry':
-            html = `
-                <h2 class="content-title">📝 사연 쓰기</h2>
-                <form id="pinForm">
-                    <div class="form-group">
-                        <label for="pin">주파수를 맞춰주세요! (6자리 핀번호)</label>
-                        <input type="text" id="pin" maxlength="6" required>
-                    </div>
-                    <button type="submit">채널 입장</button>
-                </form>
-                <div id="writeForm" style="display:none;">
-                    <h3 class="content-title" id="channelNameDisplay"></h3>
-                    <form id="storyForm">
-                        <div class="form-group">
-                            <label for="storyName">이름:</label>
-                            <input type="text" id="storyName" placeholder="홍길동" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="storyContent">사연 내용:</label>
-                            <textarea id="storyContent" rows="4" placeholder="보내고 싶은 마음을 담아 주세요."></textarea>
-                        </div>
-                        <div class="form-group" style="border-bottom: 1px solid #ddd; padding-bottom: 15px;">
-                            <label for="searchQuery">원하는 곡 검색 (가수, 제목 순서로 쓰기):</label>
-                            <input type="text" id="searchQuery" placeholder="예: 윤하, 사건의 지평선" style="margin-bottom: 5px;">
-                            <button type="button" onclick="handleSearch()" >곡 검색</button>
-                            <ul id="searchResults"></ul>
-                        </div>
-                        <div class="form-group">
-                            <label for="storyUrl">선택된 유튜브 URL (또는 직접 입력):</label>
-                            <input type="text" id="storyUrl" placeholder="선택 후 자동 입력됩니다." required>
-                        </div>
-                        <button type="submit">사연 보내기</button>
-                    </form>
-                    <p id="submissionStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
-                </div>
-            `;
-            break;
+        case 'write':
+        case 'pin_entry':
+            html = `
+                <h2 class="content-title">📝 사연 쓰기</h2>
+                <form id="pinForm">
+                    <div class="form-group">
+                        <label for="pin">주파수를 맞춰주세요! (6자리 핀번호)</label>
+                        <input type="text" id="pin" maxlength="6" required>
+                    </div>
+                    <button type="submit">채널 입장</button>
+                </form>
+                <div id="writeForm" style="display:none;">
+                    <h3 class="content-title" id="channelNameDisplay"></h3>
+                    <form id="storyForm">
+                        <div class="form-group">
+                            <label for="storyName">이름:</label>
+                            <input type="text" id="storyName" placeholder="홍길동" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="storyContent">사연 내용:</label>
+                            <textarea id="storyContent" rows="4" placeholder="보내고 싶은 마음을 담아 주세요."></textarea>
+                        </div>
+                        <div class="form-group" style="border-bottom: 1px solid #ddd; padding-bottom: 15px;">
+                            <label for="searchQuery">원하는 곡 검색 (가수, 제목 순서로 쓰기):</label>
+                            <input type="text" id="searchQuery" placeholder="예: 윤하, 사건의 지평선" style="margin-bottom: 5px;">
+                            <button type="button" onclick="handleSearch()" >곡 검색</button>
+                            <ul id="searchResults"></ul>
+                        </div>
+                        <div class="form-group">
+                            <label for="storyUrl">선택된 유튜브 URL (또는 직접 입력):</label>
+                            <input type="text" id="storyUrl" placeholder="선택 후 자동 입력됩니다." required>
+                        </div>
+                        <button type="submit">사연 보내기</button>
+                    </form>
+                    <p id="submissionStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
+                </div>
+            `;
+            break;
 
-        case 'manage_menu':
-            html = `
-                <h2 class="content-title">🔑 관리자 메뉴</h2>
-                <div class="menu-wrapper">
-                    <div class="menu-item-wrapper">
-                        <button onclick="loadContent('create_channel')">채널 만들기</button>
-                        <p>모든 사연이 재생된 채널은 <br> 자정에 자동으로 삭제됩니다.</p>
-                    </div>
-                    <div class="menu-item-wrapper">
-                        <button onclick="loadContent('login_manage_stories')">사연 관리 (승인/거절)</button>
-                        <p>로그인 후 도착한 사연을 <br> 승인/거절합니다. (승인 상태만 재생)</p>
-                    </div>
-                    <div class="menu-item-wrapper">
-                        <button onclick="loadContent('login_listen')">사연 보기 (채널 연결)</button>
-                        <p>로그인 후 승인된 사연을 <br> 순차/랜덤 재생합니다.</p>
-                    </div>
-                </div>
-            `;
-            break;
+        case 'manage_menu':
+            html = `
+                <h2 class="content-title">🔑 관리자 메뉴</h2>
+                <div class="menu-wrapper">
+                    <div class="menu-item-wrapper">
+                        <button onclick="loadContent('create_channel')">채널 만들기</button>
+                        <p>모든 사연이 재생된 채널은 <br> 자정에 자동으로 삭제됩니다.</p>
+                    </div>
+                    <div class="menu-item-wrapper">
+                        <button onclick="loadContent('login_manage_stories')">사연 관리 (승인/거절)</button>
+                        <p>로그인 후 도착한 사연을 <br> 승인/거절합니다. (승인 상태만 재생)</p>
+                    </div>
+                    <div class="menu-item-wrapper">
+                        <button onclick="loadContent('login_listen')">사연 보기 (채널 연결)</button>
+                        <p>로그인 후 승인된 사연을 <br> 순차/랜덤 재생합니다.</p>
+                    </div>
+                </div>
+            `;
+            break;
 
-        case 'create_channel':
-            html = `
-                <h2 class="content-title">🛠️ 새 채널 만들기</h2>
-                <form id="createChannelForm">
-                    <div class="form-group">
-                        <label for="channelName">채널명:</label>
-                        <input type="text" id="channelName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="teacherEmail">이메일:</label>
-                        <input type="email" id="teacherEmail" required>
-                        <p id="emailErrorInline" class="email-error-inline">유효하지 않은 이메일입니다. 주소를 다시 확인해 주세요.</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="teacherPassword">비밀번호 (4자리):</label>
-                        <input type="password" id="teacherPassword" maxlength="4" required>
-                        <p id="passwordErrorInline" class="email-error-inline">
-                            비밀번호는 영어 소문자와 숫자로 된 4글자만 사용할 수 있어요.
-                        </p>
-                    </div>
-                    <button type="submit">채널 생성</button>
-                </form>
-                <p id="createStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
-            `;
-            break;
+        case 'create_channel':
+            html = `
+                <h2 class="content-title">🛠️ 새 채널 만들기</h2>
+                <form id="createChannelForm">
+                    <div class="form-group">
+                        <label for="channelName">채널명:</label>
+                        <input type="text" id="channelName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherEmail">이메일:</label>
+                        <input type="email" id="teacherEmail" required>
+                        <p id="emailErrorInline" class="email-error-inline">유효하지 않은 이메일입니다. 주소를 다시 확인해 주세요.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherPassword">비밀번호 (4자리):</label>
+                        <input type="password" id="teacherPassword" maxlength="4" required>
+                        <p id="passwordErrorInline" class="email-error-inline">
+                            비밀번호는 영어 소문자와 숫자로 된 4글자만 사용할 수 있어요.
+                        </p>
+                    </div>
+                    <button type="submit">채널 생성</button>
+                </form>
+                <p id="createStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
+            `;
+            break;
 
-        case 'login_manage_stories':
-        case 'login_listen':
-            html = `
-                <h2 class="content-title">🔒 사연 ${page === 'login_listen' ? '보기' : '관리'} 로그인</h2>
-                <form id="manageLoginForm">
-                    <div class="form-group">
-                        <label for="managerPin">채널 PIN 번호 (6자리):</label>
-                        <input type="text" id="managerPin" maxlength="6" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="managerPassword">비밀번호 (4자리):</label>
-                        <input type="password" id="managerPassword" maxlength="4" required>
-                    </div>
-                    <button type="submit">로그인 및 ${page === 'login_listen' ? '듣기' : '목록 보기'}</button>
-                </form>
-                <p id="manageLoginStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
-            `;
-            break;
+        case 'login_manage_stories':
+        case 'login_listen':
+            html = `
+                <h2 class="content-title">🔒 사연 ${page === 'login_listen' ? '보기' : '관리'} 로그인</h2>
+                <form id="manageLoginForm">
+                    <div class="form-group">
+                        <label for="managerPin">채널 PIN 번호 (6자리):</label>
+                        <input type="text" id="managerPin" maxlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="managerPassword">비밀번호 (4자리):</label>
+                        <input type="password" id="managerPassword" maxlength="4" required>
+                    </div>
+                    <button type="submit">로그인 및 ${page === 'login_listen' ? '듣기' : '목록 보기'}</button>
+                </form>
+                <p id="manageLoginStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
+            `;
+            break;
 
-        case 'list_stories':
-            html = `<h2 class="content-title">📝 [${currentChannelName}] 사연 목록</h2>
-                    <div id="storyListArea"><p>사연 목록을 불러오는 중...</p></div>`;
-            setTimeout(fetchStoriesForManagement, 50);
-            break;
+        case 'list_stories':
+            html = `<h2 class="content-title">📝 [${currentChannelName}] 사연 목록</h2>
+                    <div id="storyListArea"><p>사연 목록을 불러오는 중...</p></div>`;
+            setTimeout(fetchStoriesForManagement, 50);
+            break;
 
-        case 'qrcode':
-            html = `
-                <h2 class="content-title">접속용 QR 코드</h2>
-                <div id="qrCodeContainer">
-                    <div id="qrcode" class="qr-size"></div>
-                </div>
-            `;
-            setTimeout(generateQrCode, 100);
-            break;
+        case 'qrcode':
+            html = `
+                <h2 class="content-title">접속용 QR 코드</h2>
+                <div id="qrCodeContainer">
+                    <div id="qrcode" class="qr-size"></div>
+                </div>
+            `;
+            setTimeout(generateQrCode, 100);
+            break;
 
-        default:
-            html = `
-                <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
-                <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
-                <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
-                <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
-            `;
-            frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
-    }
+        default:
+            html = `
+                <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
+                <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
+                <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
+                <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
+            `;
+            frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
+    }
 
-    mainContent.innerHTML = html;
+    mainContent.innerHTML = html;
 
-    if (page === 'listen') {
-        setTimeout(() => {
-            initFontToggleListeners();
-            applyTextSize(false);
-            const repeatBtn = document.getElementById('repeatScrollBtn');
-            if (repeatBtn) repeatBtn.classList.toggle('is-on', isRepeatScrolling);
-        }, 0);
-    }
+    if (page === 'listen') {
+        setTimeout(() => {
+            initFontToggleListeners();
+            applyTextSize(false);
+            const repeatBtn = document.getElementById('repeatScrollBtn');
+            if (repeatBtn) repeatBtn.classList.toggle('is-on', isRepeatScrolling);
+        }, 0);
+    }
 
-    if (page === 'write' || page === 'pin_entry') {
-        setupStoryFormListeners();
-    } else if (page === 'create_channel') {
-        document.getElementById('createChannelForm').addEventListener('submit', handleCreateChannel);
-    } else if (page === 'login_manage_stories' || page === 'login_listen') {
-        document.getElementById('manageLoginForm').addEventListener('submit', (e) => handleManageLogin(e, page));
-    }
+    if (page === 'write' || page === 'pin_entry') {
+        setupStoryFormListeners();
+    } else if (page === 'create_channel') {
+        document.getElementById('createChannelForm').addEventListener('submit', handleCreateChannel);
+    } else if (page === 'login_manage_stories' || page === 'login_listen') {
+        document.getElementById('manageLoginForm').addEventListener('submit', (e) => handleManageLogin(e, page));
+    }
 }
 
 function goBack() {
-    if (pageHistory.length > 1) {
-        pageHistory.pop();
-        const previousPage = pageHistory[pageHistory.length - 1];
-        loadContent(previousPage, true);
-    } else {
-        loadContent('welcome', true);
-    }
+    if (pageHistory.length > 1) {
+        pageHistory.pop();
+        const previousPage = pageHistory[pageHistory.length - 1];
+        loadContent(previousPage, true);
+    } else {
+        loadContent('welcome', true);
+    }
 }
 
 function showQrCode() {
-    loadContent('qrcode');
-    frequencyDisplay.textContent = '[QR CODE] - 접속 주파수';
+    loadContent('qrcode');
+    frequencyDisplay.textContent = '[QR CODE] - 접속 주파수';
 }
 function generateQrCode() {
-    const url = window.location.href.split('#')[0];
-    const qrcodeElement = document.getElementById('qrcode');
-    qrcodeElement.innerHTML = '';
-    new QRCode(qrcodeElement, {
-        text: url,
-        width: 160,
-        height: 160,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
+    const url = window.location.href.split('#')[0];
+    const qrcodeElement = document.getElementById('qrcode');
+    qrcodeElement.innerHTML = '';
+    new QRCode(qrcodeElement, {
+        text: url,
+        width: 160,
+        height: 160,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
 }
 
 async function handleCreateChannel(e) {
-    e.preventDefault();
+    e.preventDefault();
 
-    const btn = e.target.querySelector('button[type="submit"]');
-    const createStatus = document.getElementById('createStatus');
-    const emailInput = document.getElementById('teacherEmail');
-    const emailErrorInline = document.getElementById('emailErrorInline');
-    const passwordErrorInline = document.getElementById('passwordErrorInline');
+    const btn = e.target.querySelector('button[type="submit"]');
+    const createStatus = document.getElementById('createStatus');
+    const emailInput = document.getElementById('teacherEmail');
+    const emailErrorInline = document.getElementById('emailErrorInline');
+    const passwordErrorInline = document.getElementById('passwordErrorInline');
 
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = '생성 중...';
-    }
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '생성 중...';
+    }
 
-    const channelName = document.getElementById('channelName').value.trim();
-    const teacherEmail = emailInput.value.trim();
-    const teacherPassword = document.getElementById('teacherPassword').value.trim();
+    const channelName = document.getElementById('channelName').value.trim();
+    const teacherEmail = emailInput.value.trim();
+    const teacherPassword = document.getElementById('teacherPassword').value.trim();
 
-    if (!isEmailAllowed(teacherEmail)) {
-        emailErrorInline.textContent = '유효하지 않은 이메일입니다. 주소를 다시 확인해 주세요.';
-        emailErrorInline.classList.add('show');
-        createStatus.textContent = '';
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = '채널 생성';
-        }
-        return;
-    } else {
-        emailErrorInline.classList.remove('show');
-    }
+    if (!isEmailAllowed(teacherEmail)) {
+        emailErrorInline.textContent = '유효하지 않은 이메일입니다. 주소를 다시 확인해 주세요.';
+        emailErrorInline.classList.add('show');
+        createStatus.textContent = '';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '채널 생성';
+        }
+        return;
+    } else {
+        emailErrorInline.classList.remove('show');
+    }
 
-    if (!/^[a-z0-9]{4}$/.test(teacherPassword)) {
-        passwordErrorInline.textContent = '비밀번호는 영어 소문자와 숫자로 된 4글자만 사용할 수 있어요. 예: ab12, lov3, dj01';
-        passwordErrorInline.classList.add('show');
-        createStatus.textContent = '';
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = '채널 생성';
-        }
-        return;
-    } else {
-        passwordErrorInline.classList.remove('show');
-    }
+    if (!/^[a-z0-9]{4}$/.test(teacherPassword)) {
+        passwordErrorInline.textContent = '비밀번호는 영어 소문자와 숫자로 된 4글자만 사용할 수 있어요. 예: ab12, lov3, dj01';
+        passwordErrorInline.classList.add('show');
+        createStatus.textContent = '';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '채널 생성';
+        }
+        return;
+    } else {
+        passwordErrorInline.classList.remove('show');
+    }
 
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
-    startLoadingAnimation('채널 생성 중');
-    createStatus.textContent = '✨ 채널 생성 중...';
+    startLoadingAnimation('채널 생성 중');
+    createStatus.textContent = '✨ 채널 생성 중...';
 
-    const res = await callWorker('createChannel', {
-        channelName,
-        teacherEmail,
-        teacherPassword,
-        pin
-    });
+    const res = await callWorker('createChannel', {
+        channelName,
+        teacherEmail,
+        teacherPassword,
+        pin
+    });
 
-    stopLoadingAnimation();
+    stopLoadingAnimation();
 
-    if (res.success) {
-        const finalPassword = (res.password && String(res.password).trim() !== '')
-            ? res.password
-            : teacherPassword;
+    if (res.success) {
+        const finalPassword = (res.password && String(res.password).trim() !== '')
+            ? res.password
+            : teacherPassword;
 
-        showModal(
-            `${channelName} 채널 생성 완료🎉`,
-            res.pin,
-            finalPassword,
-            res.emailFailed
-        );
+        showModal(
+            `${channelName} 채널 생성 완료🎉`,
+            res.pin,
+            finalPassword,
+            res.emailFailed
+        );
 
-        if (res.emailFailed) {
-            createStatus.textContent = '채널은 생성됐지만 이메일 발송은 실패했어요. PIN을 꼭 저장해 두세요!';
-        } else {
-            createStatus.textContent = '';
-        }
-    } else {
-        createStatus.textContent = res.message;
-        createStatus.style.color = 'red';
-    }
+        if (res.emailFailed) {
+            createStatus.textContent = '채널은 생성됐지만 이메일 발송은 실패했어요. PIN을 꼭 저장해 두세요!';
+        } else {
+            createStatus.textContent = '';
+        }
+    } else {
+        createStatus.textContent = res.message;
+        createStatus.style.color = 'red';
+    }
 
-    if (btn) {
-        btn.disabled = false;
-        btn.textContent = '채널 생성';
-    }
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = '채널 생성';
+    }
 }
 
 function setupStoryFormListeners() {
-    const pinForm = document.getElementById('pinForm');
-    const storyFormContainer = document.getElementById('writeForm');
-    const storyForm = document.getElementById('storyForm');
+    const pinForm = document.getElementById('pinForm');
+    const storyFormContainer = document.getElementById('writeForm');
+    const storyForm = document.getElementById('storyForm');
 
-    pinForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const pin = document.getElementById('pin').value;
-        const channelNameDisplay = document.getElementById('channelNameDisplay');
-        const submissionStatus = document.getElementById('submissionStatus');
+    pinForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pin = document.getElementById('pin').value;
+        const channelNameDisplay = document.getElementById('channelNameDisplay');
+        const submissionStatus = document.getElementById('submissionStatus');
 
-        startLoadingAnimation('PIN 검증 중');
-        submissionStatus.textContent = '';
+        startLoadingAnimation('PIN 검증 중');
+        submissionStatus.textContent = '';
 
-        const res = await callWorker('getChannelInfoByPin', { pin });
+        const res = await callWorker('getChannelInfoByPin', { pin });
 
-        stopLoadingAnimation();
+        stopLoadingAnimation();
 
-        if (res.success) {
-            currentChannelPin = pin;
-            currentChannelName = res.channelName;
+        if (res.success) {
+            currentChannelPin = pin;
+            currentChannelName = res.channelName;
 
-            pinForm.style.display = 'none';
-            storyFormContainer.style.display = 'block';
-            frequencyDisplay.textContent = `[${currentChannelName}] 주파수 일치!`;
+            pinForm.style.display = 'none';
+            storyFormContainer.style.display = 'block';
+            frequencyDisplay.textContent = `[${currentChannelName}] 주파수 일치!`;
 
-            channelNameDisplay.textContent = `[${currentChannelName}]에 사연 보내기`;
+            channelNameDisplay.textContent = `[${currentChannelName}]에 사연 보내기`;
 
-            if (isStorySubmitted) {
-                storyForm.style.display = 'none';
-                submissionStatus.textContent = '사연은 한 번만 보낼 수 있습니다.';
-            } else {
-                storyForm.style.display = 'block';
-                submissionStatus.textContent = '';
-            }
-        } else {
-            submissionStatus.textContent = `오류: ${res.message}`;
-            currentChannelPin = null;
-            currentChannelName = null;
-        }
-    });
+            if (isStorySubmitted) {
+                storyForm.style.display = 'none';
+                submissionStatus.textContent = '사연은 한 번만 보낼 수 있습니다.';
+            } else {
+                storyForm.style.display = 'block';
+                submissionStatus.textContent = '';
+            }
+        } else {
+            submissionStatus.textContent = `오류: ${res.message}`;
+            currentChannelPin = null;
+            currentChannelName = null;
+        }
+    });
 
-    storyForm.addEventListener('submit', handleStorySubmit);
+    storyForm.addEventListener('submit', handleStorySubmit);
 }
 
 async function handleStorySubmit(e) {
-    e.preventDefault();
+    e.preventDefault();
 
-    if (isStorySubmitted || !currentChannelPin) {
-        alert('채널 인증이 필요하거나 이미 사연을 보냈습니다. 💡');
-        return;
-    }
+    if (isStorySubmitted || !currentChannelPin) {
+        alert('채널 인증이 필요하거나 이미 사연을 보냈습니다. 💡');
+        return;
+    }
 
-    const form = document.getElementById('storyForm');
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = '보내는 중...';
-    }
+    const form = document.getElementById('storyForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '보내는 중...';
+    }
 
-    const name = document.getElementById('storyName').value;
-    const content = document.getElementById('storyContent').value;
-    const url = document.getElementById('storyUrl').value;
-    const statusDiv = document.getElementById('submissionStatus');
+    const name = document.getElementById('storyName').value;
+    const content = document.getElementById('storyContent').value;
+    const url = document.getElementById('storyUrl').value;
+    const statusDiv = document.getElementById('submissionStatus');
 
-    startLoadingAnimation('사연 보내는 중');
-    statusDiv.textContent = '보내는 중... 잠시만 기다려주세요.';
+    startLoadingAnimation('사연 보내는 중');
+    statusDiv.textContent = '보내는 중... 잠시만 기다려주세요.';
 
-    const res = await callWorker('submitStory', {
-        name: name,
-        content: content,
-        youtubeUrl: url,
-        pin: currentChannelPin
-    });
+    const res = await callWorker('submitStory', {
+        name: name,
+        content: content,
+        youtubeUrl: url,
+        pin: currentChannelPin
+    });
 
-    stopLoadingAnimation();
+    stopLoadingAnimation();
 
-    if (res.success) {
-        statusDiv.textContent = '✅ 사연을 보냈습니다! (승인 대기 중)';
-        isStorySubmitted = true;
-        form.style.display = 'none';
-    } else {
-        statusDiv.textContent = `오류 발생: ${res.message}`;
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '사연 보내기';
-        }
-    }
+    if (res.success) {
+        statusDiv.textContent = '✅ 사연을 보냈습니다! (승인 대기 중)';
+        isStorySubmitted = true;
+        form.style.display = 'none';
+    } else {
+        statusDiv.textContent = `오류 발생: ${res.message}`;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '사연 보내기';
+        }
+    }
 }
 
 async function handleManageLogin(e, loginType) {
-    e.preventDefault();
-    const pin = document.getElementById('managerPin').value;
-    const password = document.getElementById('managerPassword').value;
-    const loginStatus = document.getElementById('manageLoginStatus');
+    e.preventDefault();
+    const pin = document.getElementById('managerPin').value;
+    const password = document.getElementById('managerPassword').value;
+    const loginStatus = document.getElementById('manageLoginStatus');
 
-    startLoadingAnimation('로그인 중');
-    loginStatus.textContent = '로그인 중...';
+    startLoadingAnimation('로그인 중');
+    loginStatus.textContent = '로그인 중...';
 
-    // 💡 인증 및 채널 정보 가져오기
-    const channelInfo = await callWorker('getChannelInfoByPin', { pin });
-    if (!channelInfo.success) {
-        stopLoadingAnimation();
-        loginStatus.textContent = `인증 실패: ${channelInfo.message}`;
-        return;
-    }
+    const authRes = await callWorker('getAllStories', { pin, password });
 
-    // 💡 getAllStories는 데이터 로딩 목적이므로, 인증만 분리
-    const authRes = await callWorker('authenticateManager', { pin, password });
-    stopLoadingAnimation();
+    stopLoadingAnimation();
 
-    if (authRes.success) {
-        currentChannelName = channelInfo.channelName;
-        currentChannelPin = pin;
-        managerPassword = password;
-        loginStatus.textContent = `로그인 성공! [${currentChannelName}] 채널 연결 완료`;
-        setTimeout(() => {
-            if (loginType === 'login_listen') {
-                loadContent('listen');
-            } else {
-                loadContent('list_stories');
-            }
-        }, 500);
-    } else {
-        loginStatus.textContent = `인증 실패: ${authRes.message}`;
-    }
+    if (authRes.success || (authRes.message && authRes.message.includes('도착한 사연이 없습니다'))) {
+        const channelInfo = await callWorker('getChannelInfoByPin', { pin });
+        if (channelInfo.success) {
+            currentChannelName = channelInfo.channelName;
+            currentChannelPin = pin;
+            managerPassword = password;
+            loginStatus.textContent = `로그인 성공! [${currentChannelName}] 채널 연결 완료`;
+            setTimeout(() => {
+                if (loginType === 'login_listen') {
+                    loadContent('listen');
+                } else {
+                    loadContent('list_stories');
+                }
+            }, 500);
+        } else {
+            loginStatus.textContent = `인증 실패: ${channelInfo.message}`;
+        }
+    } else {
+        loginStatus.textContent = `인증 실패: ${authRes.message}`;
+    }
 }
 
 async function fetchStoriesForManagement() {
-    if (!currentChannelPin || !managerPassword) {
-        document.getElementById('storyListArea').innerHTML = '<p style="color: red;">인증 정보가 없습니다. 다시 로그인해 주세요.</p>';
-        return;
-    }
+    if (!currentChannelPin || !managerPassword) {
+        document.getElementById('storyListArea').innerHTML = '<p style="color: red;">인증 정보가 없습니다. 다시 로그인해 주세요.</p>';
+        return;
+    }
 
-    const storyListArea = document.getElementById('storyListArea');
-    storyListArea.innerHTML = `<p>사연 목록을 서버에서 불러오는 중...</p>`;
+    const storyListArea = document.getElementById('storyListArea');
+    storyListArea.innerHTML = `<p>사연 목록을 서버에서 불러오는 중...</p>`;
 
-    startLoadingAnimation('사연 목록 로드 중');
+    startLoadingAnimation('사연 목록 로드 중');
 
-    const res = await callWorker('getAllStories', {
-        pin: currentChannelPin,
-        password: managerPassword
-    });
+    const res = await callWorker('getAllStories', {
+        pin: currentChannelPin,
+        password: managerPassword
+    });
 
-    stopLoadingAnimation();
+    stopLoadingAnimation();
 
-    if (res.success) {
-        const stories = res.stories;
-        if (stories.length === 0) {
-            storyListArea.innerHTML = `<p>아직 도착한 사연이 없습니다. 📝</p>`;
-            return;
-        }
+    if (res.success) {
+        const stories = res.stories;
+        if (stories.length === 0) {
+            storyListArea.innerHTML = `<p>아직 도착한 사연이 없습니다. 📝</p>`;
+            return;
+        }
 
-        let tableHtml = `
-            <form id="bulkUpdateForm">
-            <table class="story-table">
-                <thead>
-                    <tr>
-                        <th>날짜</th>
-                        <th>이름</th>
-                        <th><span title="마우스를 올리면 전체 내용이 보입니다.">사연 (앞부분 일부)</span></th>
-                        <th>URL</th>
-                        <th>상태</th>
-                        <th>승인/거절</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+        let tableHtml = `
+            <form id="bulkUpdateForm">
+            <table class="story-table">
+                <thead>
+                    <tr>
+                        <th>날짜</th>
+                        <th>이름</th>
+                        <th><span title="마우스를 올리면 전체 내용이 보입니다.">사연 (앞부분 일부)</span></th>
+                        <th>URL</th>
+                        <th>상태</th>
+                        <th>승인/거절</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
-        stories.forEach(story => {
-            let statusText = story.status;
-            let statusClass;
-            statusClass = `status-${story.status.toLowerCase()}`;
-            if (story.isPlayed) {
-                 statusText += ' (완료)';
-            }
+        stories.forEach(story => {
+            let statusText = story.status;
+            let statusClass;
+            statusClass = `status-${story.status.toLowerCase()}`;
+            if (story.isPlayed) {
+                 statusText += ' (완료)';
+            }
 
 
-            const contentSnippet = story.content.length > 15 ? story.content.substring(0, 15) + '...' : story.content;
-            const formattedDate = new Date(story.timestamp).toLocaleDateString('ko-KR');
+            const contentSnippet = story.content.length > 15 ? story.content.substring(0, 15) + '...' : story.content;
+            const formattedDate = new Date(story.timestamp).toLocaleDateString('ko-KR');
 
-            tableHtml += `
-                <tr>
-                    <td>${formattedDate}</td>
-                    <td>${story.name}</td>
-                    <td title="${story.content}" class="story-content-cell">${contentSnippet}</td>
-                    <td><a href="${story.youtubeUrl}" target="_blank">링크</a></td>
-                    <td class="${statusClass}">${statusText}</td>
-                    <td>
-                        <select name="status_${story.rowNum}" data-row="${story.rowNum}" class="status-select">
-                            <option value="${story.status}" selected disabled>${story.status}</option>
-                            <option value="Approved" ${story.status === 'Approved' ? 'selected' : ''}>승인 (Approved)</option>
-                            <option value="Rejected" ${story.status === 'Rejected' ? 'selected' : ''}>거절 (Rejected)</option>
-                            <option value="Pending" ${story.status === 'Pending' ? 'selected' : ''}>대기 (Pending)</option>
-                        </select>
-                    </td>
-                </tr>
-            `;
-        });
+            tableHtml += `
+                <tr>
+                    <td>${formattedDate}</td>
+                    <td>${story.name}</td>
+                    <td title="${story.content}" class="story-content-cell">${contentSnippet}</td>
+                    <td><a href="${story.youtubeUrl}" target="_blank">링크</a></td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td>
+                        <select name="status_${story.rowNum}" data-row="${story.rowNum}" class="status-select">
+                            <option value="${story.status}" selected disabled>${story.status}</option>
+                            <option value="Approved" ${story.status === 'Approved' ? 'selected' : ''}>승인 (Approved)</option>
+                            <option value="Rejected" ${story.status === 'Rejected' ? 'selected' : ''}>거절 (Rejected)</option>
+                            <option value="Pending" ${story.status === 'Pending' ? 'selected' : ''}>대기 (Pending)</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        });
 
-        tableHtml += `</tbody></table>
-                        <button type="submit" class="button-group" style="margin-top: 15px; background-color: var(--dark-wood); color: var(--dial-color);">일괄 저장 (상태 변경)</button>
-                        </form>`;
+        tableHtml += `</tbody></table>
+                        <button type="submit" class="button-group" style="margin-top: 15px; background-color: var(--dark-wood); color: var(--dial-color);">일괄 저장 (상태 변경)</button>
+                        </form>`;
 
-        storyListArea.innerHTML = tableHtml;
-        document.getElementById('bulkUpdateForm').addEventListener('submit', handleBulkSave);
+        storyListArea.innerHTML = tableHtml;
+        document.getElementById('bulkUpdateForm').addEventListener('submit', handleBulkSave);
 
-    } else {
-        storyListArea.innerHTML = `<p style="color: red;">사연 목록을 불러오지 못했습니다: ${res.message}</p>`;
-    }
+    } else {
+        storyListArea.innerHTML = `<p style="color: red;">사연 목록을 불러오지 못했습니다: ${res.message}</p>`;
+    }
 }
 
 async function handleBulkSave(e) {
-    e.preventDefault();
-    if (!currentChannelPin || !managerPassword) {
-        alert('채널 인증 정보가 유효하지 않습니다.');
-        return;
-    }
-    if (!confirm('변경된 상태를 서버에 일괄 저장하시겠습니까?')) return;
+    e.preventDefault();
+    if (!currentChannelPin || !managerPassword) {
+        alert('채널 인증 정보가 유효하지 않습니다.');
+        return;
+    }
+    if (!confirm('변경된 상태를 서버에 일괄 저장하시겠습니까?')) return;
 
-    const form = e.target;
-    const selectElements = form.querySelectorAll('.status-select');
-    const updates = [];
-    let isChanged = false;
+    const form = e.target;
+    const selectElements = form.querySelectorAll('.status-select');
+    const updates = [];
+    let isChanged = false;
 
-    selectElements.forEach(select => {
-        const initialStatus = select.options[0].value;
-        const newStatus = select.value;
-        if (initialStatus !== newStatus) {
-            updates.push({
-                rowNum: parseInt(select.dataset.row),
-                newStatus: newStatus
-            });
-            isChanged = true;
-        }
-    });
+    selectElements.forEach(select => {
+        const initialStatus = select.options[0].value;
+        const newStatus = select.value;
+        if (initialStatus !== newStatus) {
+            updates.push({
+                rowNum: parseInt(select.dataset.row),
+                newStatus: newStatus
+            });
+            isChanged = true;
+        }
+    });
 
-    if (!isChanged) {
-        alert('변경된 내용이 없습니다.');
-        return;
-    }
+    if (!isChanged) {
+        alert('변경된 내용이 없습니다.');
+        return;
+    }
 
-    const saveButton = form.querySelector('button[type="submit"]');
-    saveButton.textContent = '저장 중...';
-    saveButton.disabled = true;
+    const saveButton = form.querySelector('button[type="submit"]');
+    saveButton.textContent = '저장 중...';
+    saveButton.disabled = true;
 
-    const res = await callWorker('bulkUpdateStories', {
-        pin: currentChannelPin,
-        password: managerPassword,
-        updates: updates
-    });
+    const res = await callWorker('bulkUpdateStories', {
+        pin: currentChannelPin,
+        password: managerPassword,
+        updates: updates
+    });
 
-    if (res.success) {
-        alert(res.message);
-    } else {
-        alert(`일괄 저장 실패: ${res.message}`);
-    }
-    fetchStoriesForManagement();
+    if (res.success) {
+        alert(res.message);
+    } else {
+        alert(`일괄 저장 실패: ${res.message}`);
+    }
+    fetchStoriesForManagement();
 }
 
-/** 💡 playStories 개선 (셔플 오류 방지 목적) */
 async function playStories(mode) {
-    if (!currentChannelPin) {
-        alert('채널 정보가 유효하지 않습니다.');
-        return;
-    }
+    if (!currentChannelPin) {
+        alert('채널 정보가 유효하지 않습니다.');
+        return;
+    }
 
-    playMode = mode;
+    playMode = mode;
 
-    const playerArea = document.querySelector('#mainContent .scroll-text-box #playerArea');
-    if (playerArea) {
-        playerArea.innerHTML = `<p>사연을 불러오는 중...</p>`;
-    }
+    const playerArea = document.querySelector('#mainContent .scroll-text-box #playerArea');
+    if (playerArea) {
+        playerArea.innerHTML = `<p>사연을 불러오는 중...</p>`;
+    }
 
-    startLoadingAnimation('사연을 불러오는 중');
+    startLoadingAnimation('사연을 불러오는 중');
 
-    // 💡 서버에서 모든 사연을 다시 불러옵니다.
-    const allStoriesRes = await callWorker('getAllStories', { pin: currentChannelPin, password: managerPassword });
-    stopLoadingAnimation();
+    const allStoriesRes = await callWorker('getAllStories', { pin: currentChannelPin, password: managerPassword });
+    stopLoadingAnimation();
 
-    if (!allStoriesRes.success) {
-        mainContent.innerHTML = `<p style="color: red;">사연을 불러오지 못했습니다: ${allStoriesRes.message}</p>`;
-        frequencyDisplay.textContent = '사연 로드 실패';
-        return;
-    }
+    if (!allStoriesRes.success) {
+        mainContent.innerHTML = `<p style="color: red;">사연을 불러오지 못했습니다: ${allStoriesRes.message}</p>`;
+        return;
+    }
 
-    const stories = allStoriesRes.stories || [];
-    const approvedStories = stories.filter(s => s.status === 'Approved');
-    const pendingStories = stories.filter(s => s.status === 'Pending');
-    
-    // 💡 재생 목록을 재구성: 승인됨, 아직 재생되지 않음, YouTube URL 유효함
-    const unplayedApprovedWithUrl = approvedStories.filter(s => 
-        !s.isPlayed && s.youtubeUrl && getYoutubeVideoId(s.youtubeUrl)
-    );
+    const stories = allStoriesRes.stories || [];
+    const approvedStories = stories.filter(s => s.status === 'Approved');
+    const pendingStories = stories.filter(s => s.status === 'Pending');
+    
+    const unplayedApprovedWithUrl = approvedStories.filter(s => !s.isPlayed && s.youtubeUrl && getYoutubeVideoId(s.youtubeUrl));
 
-    originalApprovedStories = approvedStories; // 💡 전체 승인된 사연 저장
-    approvedUnplayedCount = unplayedApprovedWithUrl.length; 
-    currentPlayOrder = 0; 
-    currentStoryIndex = -1; // 재생할 인덱스 초기화
+    approvedUnplayedCount = unplayedApprovedWithUrl.length; 
+    originalTotalStories = approvedStories.length;
+    currentPlayOrder = 0; 
 
-    if (approvedStories.length === 0) {
-        mainContent.innerHTML = `
-            <h2 class="content-title">🎶 사연 읽기</h2>
-            <p>현재 승인된 사연이 없습니다. 관리자 페이지에서 사연을 승인해 주세요.</p>
-        `;
-        frequencyDisplay.textContent = '승인된 사연 없음';
-        return;
-    }
+    if (approvedStories.length === 0) {
+        mainContent.innerHTML = `
+            <h2 class="content-title">🎶 사연 읽기</h2>
+            <p>현재 승인된 사연이 없습니다. 관리자 페이지에서 사연을 승인해 주세요.</p>
+        `;
+        frequencyDisplay.textContent = '승인된 사연 없음';
+        return;
+    }
 
-    if (approvedUnplayedCount === 0) {
-        if (pendingStories.length === 0) {
-            mainContent.innerHTML = `
-                <h2 class="content-title">🎶 사연 읽기</h2>
-                <p>모든 사연을 재생했습니다. 🎉 채널은 자정에 자동으로 삭제됩니다</p>
-            `;
-            frequencyDisplay.textContent = '모든 사연 재생 완료';
-            return;
-        }
-        else {
-            mainContent.innerHTML = `
-                <h2 class="content-title">🎶 사연 읽기</h2>
-                <p>승인된 사연이 모두 재생되었습니다. <br>대기 중인 사연 (${pendingStories.length}개)이 있습니다. <br>관리자 페이지에서 사연을 승인해 주세요.</p>
-            `;
-            frequencyDisplay.textContent = `대기 사연 (${pendingStories.length}) 확인 필요`;
-            return;
-        }
-    }
+    if (approvedUnplayedCount === 0) {
+        if (pendingStories.length === 0) {
+            mainContent.innerHTML = `
+                <h2 class="content-title">🎶 사연 읽기</h2>
+                <p>모든 사연을 재생했습니다. 🎉 채널은 자정에 자동으로 삭제됩니다</p>
+            `;
+            frequencyDisplay.textContent = '모든 사연 재생 완료';
+            return;
+        }
+        else {
+            mainContent.innerHTML = `
+                <h2 class="content-title">🎶 사연 읽기</h2>
+                <p>승인된 사연이 모두 재생되었습니다. <br>대기 중인 사연 (${pendingStories.length}개)이 있습니다. <br>관리자 페이지에서 사연을 승인해 주세요.</p>
+            `;
+            frequencyDisplay.textContent = `대기 사연 (${pendingStories.length}) 확인 필요`;
+            return;
+        }
+    }
 
-    // 💡 새로운 재생 리스트 설정
-    storyData = unplayedApprovedWithUrl;
-    
-    if (playMode === 'sequential') {
-        // 순차 재생: 타임스탬프 순으로 정렬
-        storyData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    } else {
-        // 랜덤 재생: 리스트 셔플
-        shuffleArray(storyData);
-    }
+    storyData = unplayedApprovedWithUrl;
+    
+    if (playMode === 'sequential') {
+        storyData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        currentStoryIndex = 0;
+    } else {
+        shuffleArray(storyData);
+        currentStoryIndex = 0;
+    }
 
-    currentStoryIndex = 0; // 첫 번째 사연으로 시작
+    loadContent('listen', true);
 
-    loadContent('listen', true); // 재생 화면으로 이동
+    setTimeout(() => {
+        initFontToggleListeners();
+        applyTextSize(false);
+        const repeatBtn = document.getElementById('repeatScrollBtn');
+        if (repeatBtn) {
+            repeatBtn.classList.toggle('is-on', isRepeatScrolling);
+        }
+    }, 0);
 
-    setTimeout(() => {
-        initFontToggleListeners();
-        applyTextSize(false);
-        const repeatBtn = document.getElementById('repeatScrollBtn');
-        if (repeatBtn) {
-            repeatBtn.classList.toggle('is-on', isRepeatScrolling);
-        }
-        loadYoutubeAPI();
-    }, 0);
+    loadYoutubeAPI();
 }
 
 function shuffleArray(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
 }
 
 function loadYoutubeAPI() {
-    if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-        window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-    } else {
-        onYouTubeIframeAPIReady();
-    }
+    if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+    } else {
+        onYouTubeIframeAPIReady();
+    }
 }
 
 function onYouTubeIframeAPIReady() {
-    const youtubeBox = document.getElementById('youtubePlayer');
-    if (!youtubeBox) {
-        console.error("YouTube Player DOM element not found.");
-        return;
-    }
+    const youtubeBox = document.getElementById('youtubePlayer');
+    if (!youtubeBox) {
+        console.error("YouTube Player DOM element not found.");
+        return;
+    }
 
-    // 💡 기존 플레이어 인스턴스가 있다면 제거 (중복 생성 방지)
-    if (player) {
-        player.destroy();
-        player = null;
-    }
-
-    player = new YT.Player('youtubePlayer', {
-        height: '100%',
-        width: '100%',
-        playerVars: {
-            'rel': 0,
-            'modestbranding': 1,
-            'autoplay': 1,
-            'disablekb': 1,
-            'iv_load_policy': 3,
-            'showinfo': 0,
-            'cc_load_policy': 0
-        },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange,
-            'onError': onPlayerError // 💡 유튜브 플레이어 에러 핸들링 추가
-        }
-    });
+    player = new YT.Player('youtubePlayer', {
+        height: '100%',
+        width: '100%',
+        playerVars: {
+            'rel': 0,
+            'modestbranding': 1,
+            'autoplay': 1,
+            'disablekb': 1,
+            'iv_load_policy': 3,
+            'showinfo': 0,
+            'cc_load_policy': 0
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
 }
 
 function onPlayerReady() {
-    // 💡 playStories에서 currentStoryIndex를 설정했으므로, 바로 재생 시작
-    if (currentStoryIndex !== -1) {
-        playCurrentStory();
-    } else {
-        playNextStory();
-    }
-}
-
-function onPlayerError(event) {
-    console.error('YouTube Player Error:', event.data);
-    const errorMsg = `YouTube 재생 오류 발생 (코드: ${event.data}). 다음 사연으로 넘어갑니다.`;
-    frequencyDisplay.textContent = errorMsg;
-    const playerArea = document.getElementById('playerArea');
-    if (playerArea) playerArea.textContent = errorMsg;
-
-    // 💡 오류 발생 시 해당 사연을 재생 완료 처리하고 다음 사연 재생
-    if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
-        const story = storyData[currentStoryIndex];
-        
-        callWorker('setStoryPlayed', {
-            pin: currentChannelPin,
-            rowNum: story.rowNum
-        }).catch(err => {
-            console.warn('[Playback Error] setStoryPlayed failed (ignored):', err);
-        });
-
-        storyData.splice(currentStoryIndex, 1);
-        currentStoryIndex = -1;
-    }
-    
-    setTimeout(playNextStory, 2000); // 2초 후 다음 곡 재생 시도
+    playNextStory();
 }
 
 function onPlayerStateChange(event) {
-    if (event.data === 1) { 
-        if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
-            const story = storyData[currentStoryIndex];
+    if (event.data === 1) { 
+        if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
+            const story = storyData[currentStoryIndex];
 
-            const now = Date.now();
-            if (lastStartedRowNum !== story.rowNum || (now - lastStartedStamp) > 2000) {
-                lastStartedRowNum = story.rowNum;
-                lastStartedStamp = now;
+            const now = Date.now();
+            if (lastStartedRowNum !== story.rowNum || (now - lastStartedStamp) > 2000) {
+                lastStartedRowNum = story.rowNum;
+                lastStartedStamp = now;
 
-                (async () => {
-                    try {
-                        await callWorker('setStoryStarted', {
-                            pin: currentChannelPin,
-                            rowNum: story.rowNum,
-                            startedAt: now
-                        });
-                    } catch (e) {
-                        console.warn('재생 시작 체크 실패(무시):', e);
-                    }
-                })();
-            }
+                (async () => {
+                    try {
+                        await callWorker('setStoryStarted', {
+                            pin: currentChannelPin,
+                            rowNum: story.rowNum,
+                            startedAt: now
+                        });
+                    } catch (e) {
+                        console.warn('재생 시작 체크 실패(무시):', e);
+                    }
+                })();
+            }
 
-            const storyInfoElement = document.getElementById('currentStoryInfo');
-            if (storyInfoElement) {
-                storyInfoElement.textContent = `${approvedUnplayedCount}개 사연 중 ${currentPlayOrder}번째`;
-            }
-        }
-    }
+            const storyInfoElement = document.getElementById('currentStoryInfo');
+            if (storyInfoElement) {
+                storyInfoElement.textContent = `${approvedUnplayedCount}개 사연 중 ${currentPlayOrder}번째`;
+            }
+        }
+    }
 
-    if (event.data === 0) { // 💡 재생 종료
-        // 현재 재생 중이던 사연을 재생 완료 처리
-        if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
-            const story = storyData[currentStoryIndex];
+    if (event.data === 0) { 
+        if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
+            const story = storyData[currentStoryIndex];
 
-            // 서버에 재생 완료 보고 (비동기)
-            callWorker('setStoryPlayed', {
-                pin: currentChannelPin,
-                rowNum: story.rowNum
-            }).catch(err => {
-                console.warn('[Playback] setStoryPlayed failed (ignored):', err);
-            });
-            
-            // 재생 목록에서 사연 제거
-            storyData.splice(currentStoryIndex, 1);
-            currentStoryIndex = -1; // 다음 재생을 위해 리셋
-        }
-        
-        playNextStory();
-    }
+            callWorker('setStoryPlayed', {
+                pin: currentChannelPin,
+                rowNum: story.rowNum
+            }).catch(err => {
+                console.warn('[Playback] setStoryPlayed failed (ignored):', err);
+            });
+
+            storyData.splice(currentStoryIndex, 1);
+            currentStoryIndex = -1;
+
+            playNextStory();
+        } else {
+            playNextStory();
+        }
+    }
 }
-
-function playCurrentStory() {
-    if (currentStoryIndex === -1 || !storyData[currentStoryIndex] || !player) {
-        console.warn("현재 재생할 사연 정보가 없거나 플레이어가 준비되지 않았습니다.");
-        playNextStory();
-        return;
-    }
-
-    currentPlayOrder++;
-
-    const story = storyData[currentStoryIndex];
-    const videoId = getYoutubeVideoId(story.youtubeUrl);
-
-    if (videoId) {
-        // 💡 로드 전에 스크롤 멈춤 및 텍스트 설정
-        const scrollingText = document.getElementById('scrollingText');
-        scrollingText.textContent = `[${story.name} 님의 사연]\n${story.content}`;
-        restartCurrentScrolling(); // 스크롤 재시작 (duration 재계산 포함)
-
-        player.loadVideoById(videoId);
-        frequencyDisplay.textContent = `ON AIR: ${story.name} 님의 사연 (채널: ${currentChannelName})`;
-
-        const storyInfoElement = document.getElementById('currentStoryInfo');
-        if (storyInfoElement) {
-            storyInfoElement.textContent = `${approvedUnplayedCount}개 사연 중 ${currentPlayOrder}번째`;
-        }
-        
-        const playerArea = document.getElementById('playerArea');
-        if (playerArea) {
-             playerArea.innerHTML = ``;
-        }
-
-    } else {
-        console.error('유효하지 않은 YouTube URL 또는 ID: ', story.youtubeUrl);
-        // 💡 유효하지 않은 URL은 재생 완료 처리하고 목록에서 제거 후 다음 사연 재생
-        currentPlayOrder--; 
-        
-        storyData.splice(currentStoryIndex, 1); // 목록에서 제거
-        currentStoryIndex = -1; // 인덱스 리셋
-        
-        // 💡 서버에 isPlayed = true로 업데이트는 생략. (관리자 페이지에서 확인 가능하도록)
-        playNextStory(); 
-    }
-}
-
 
 function playNextStory() {
-    const storyInfoElement = document.getElementById('currentStoryInfo');
-    const playerArea = document.getElementById('playerArea');
+    const storyInfoElement = document.getElementById('currentStoryInfo');
+    const playerArea = document.getElementById('playerArea');
 
-    if (storyData.length === 0) {
-        if (playerArea) {
-             playerArea.innerHTML = `<p>다음 사연이 없습니다. 다시 재생 버튼을 눌러 상태를 갱신해 주세요.</p>`;
-        }
-        frequencyDisplay.textContent = '재생 목록 종료';
-        if (storyInfoElement) {
-            // originalApprovedStories.length: 승인된 전체 사연 수
-            // approvedUnplayedCount: 최초 재생 시작 시점의 미재생 사연 수
-            const totalStories = originalApprovedStories.length;
-            storyInfoElement.textContent = `${totalStories}개 사연 중 ${approvedUnplayedCount}개 완료 (새로고침 필요)`; 
-        }
-        if (player) player.stopVideo();
-        return;
-    }
+    if (storyData.length === 0) {
+        if (playerArea) {
+             playerArea.innerHTML = `<p>다음 사연이 없습니다. 다시 재생 버튼을 눌러 상태를 갱신해 주세요.</p>`;
+        }
+        frequencyDisplay.textContent = '재생 목록 종료';
+        if (storyInfoElement) {
+            const totalPlayed = approvedUnplayedCount > 0 ? approvedUnplayedCount : originalTotalStories;
+            storyInfoElement.textContent = `${totalPlayed}개 사연 중 ${totalPlayed}번째 (완료)`; 
+        }
+        if (player) player.stopVideo();
+        return;
+    }
 
-    // 💡 이미 playStories에서 0으로 설정했으므로 다시 0으로 설정
-    currentStoryIndex = 0; 
-    playCurrentStory();
+    currentStoryIndex = 0; 
+
+    currentPlayOrder++;
+
+    const story = storyData[currentStoryIndex];
+    const videoId = getYoutubeVideoId(story.youtubeUrl);
+
+    if (videoId && player) {
+        player.loadVideoById(videoId);
+        frequencyDisplay.textContent = `ON AIR: ${story.name} 님의 사연 (채널: ${currentChannelName})`;
+
+        const scrollingText = document.getElementById('scrollingText');
+        scrollingText.textContent = `[${story.name} 님의 사연]\n${story.content}`;
+
+        if (storyInfoElement) {
+            storyInfoElement.textContent = `${approvedUnplayedCount}개 사연 중 ${currentPlayOrder}번째`;
+        }
+        
+        if (playerArea) {
+             playerArea.innerHTML = ``;
+        }
+
+        restartCurrentScrolling();
+    } else {
+        console.error('유효하지 않은 YouTube URL 또는 ID: ', story.youtubeUrl);
+        currentPlayOrder--; // 유효하지 않은 URL은 카운트를 되돌리고 리스트에서 제외
+        storyData.splice(currentStoryIndex, 1);
+        currentStoryIndex = -1;
+        playNextStory();
+    }
 }
 
-
 function toggleRepeatScrolling(btn) {
-    isRepeatScrolling = !isRepeatScrolling;
-    if (btn) {
-        btn.classList.toggle('is-on', isRepeatScrolling);
-    }
-    if (isRepeatScrolling) {
-        restartCurrentScrolling();
-    } else {
-        if (scrollWatchTimer) {
-            clearInterval(scrollWatchTimer);
-            scrollWatchTimer = null;
-        }
-    }
+    isRepeatScrolling = !isRepeatScrolling;
+    if (btn) {
+        btn.classList.toggle('is-on', isRepeatScrolling);
+    }
+    if (isRepeatScrolling) {
+        restartCurrentScrolling();
+    } else {
+        if (scrollWatchTimer) {
+            clearInterval(scrollWatchTimer);
+            scrollWatchTimer = null;
+        }
+    }
 }
 
 function restartCurrentScrolling() {
-    const el = document.getElementById('scrollingText');
-    if (!el) return;
+    const el = document.getElementById('scrollingText');
+    if (!el) return;
 
-    // 💡 애니메이션 초기화 (스크롤 끝에 도달했을 때만)
-    if (el.style.animationName === 'scrollUp') {
-        el.style.animation = 'none';
-        el.style.top = '100%';
-        el.style.animationDelay = '0s';
-        
-        // 💡 CSS 변경을 위한 강제 리플로우
-        el.offsetHeight; 
-    }
+    el.style.animation = 'none';
+    el.style.top = '100%';
+    el.style.animationDelay = '0s';
 
-    setTimeout(() => {
-        el.classList.remove('size-small', 'size-large');
-        el.classList.add(textSizeMode === 'large' ? 'size-large' : 'size-small');
+    setTimeout(() => {
+        el.classList.remove('size-small', 'size-large');
+        el.classList.add(textSizeMode === 'large' ? 'size-large' : 'size-small');
 
-        setScrollAnimationDuration(el);
-        applyTextSize(false);
+        setScrollAnimationDuration(el);
+        applyTextSize(false);
 
-        startScrollWatcher();
-    }, 50);
+        startScrollWatcher();
+    }, 50);
 }
 
 function setScrollAnimationDuration(el) {
-    const container = el.parentElement;
-    if (!container) return;
+    const container = el.parentElement;
+    if (!container) return;
 
-    const boxHeight = container.getBoundingClientRect().height;
-    const textHeight = el.getBoundingClientRect().height;
+    const boxHeight = container.getBoundingClientRect().height;
+    const textHeight = el.getBoundingClientRect().height;
 
-    let scrollDistance = textHeight + boxHeight + 40; 
+    let scrollDistance = textHeight + boxHeight + 40; 
 
-    let durationSec = scrollDistance / SCROLL_SPEED;
-    if (durationSec < MIN_SCROLL_SEC) durationSec = MIN_SCROLL_SEC;
-    if (durationSec > MAX_SCROLL_SEC) durationSec = MAX_SCROLL_SEC;
+    let durationSec = scrollDistance / SCROLL_SPEED;
+    if (durationSec < MIN_SCROLL_SEC) durationSec = MIN_SCROLL_SEC;
+    if (durationSec > MAX_SCROLL_SEC) durationSec = MAX_SCROLL_SEC;
 
-    el.style.animation = `scrollUp ${durationSec}s linear forwards`;
+    el.style.animation = `scrollUp ${durationSec}s linear forwards`;
 }
 
 function startScrollWatcher() {
-    if (scrollWatchTimer) {
-        clearInterval(scrollWatchTimer);
-        scrollWatchTimer = null;
-    }
+    if (scrollWatchTimer) {
+        clearInterval(scrollWatchTimer);
+        scrollWatchTimer = null;
+    }
 
-    const el = document.getElementById('scrollingText');
-    if (!el) return;
+    const el = document.getElementById('scrollingText');
+    if (!el) return;
 
-    scrollWatchTimer = setInterval(() => {
-        if (!isRepeatScrolling) {
-            clearInterval(scrollWatchTimer);
-            scrollWatchTimer = null;
-            return;
-        }
-        const container = el.parentElement;
-        if (!container) return;
+    scrollWatchTimer = setInterval(() => {
+        if (!isRepeatScrolling) {
+            clearInterval(scrollWatchTimer);
+            scrollWatchTimer = null;
+            return;
+        }
+        const container = el.parentElement;
+        if (!container) return;
 
-        const elRect = el.getBoundingClientRect();
-        const boxRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const boxRect = container.getBoundingClientRect();
 
-        const isOut = elRect.bottom < boxRect.top;
+        const isOut = elRect.bottom < boxRect.top;
 
-        if (isOut) {
-            clearInterval(scrollWatchTimer);
-            scrollWatchTimer = null;
-            setTimeout(() => {
-                if (isRepeatScrolling) {
-                    restartCurrentScrolling();
-                }
-            }, 1200); 
-        }
-    }, 400);
+        if (isOut) {
+            clearInterval(scrollWatchTimer);
+            scrollWatchTimer = null;
+            setTimeout(() => {
+                if (isRepeatScrolling) {
+                    restartCurrentScrolling();
+                }
+            }, 1200); 
+        }
+    }, 400);
 }
 
 document.addEventListener('animationend', function (e) {
-    if (e.target && e.target.id === 'scrollingText') {
-        if (isRepeatScrolling) {
-            setTimeout(() => {
-                if (isRepeatScrolling) {
-                    restartCurrentScrolling();
-                }
-            }, 1200);
-        }
-    }
+    if (e.target && e.target.id === 'scrollingText') {
+        if (isRepeatScrolling) {
+            setTimeout(() => {
+                if (isRepeatScrolling) {
+                    restartCurrentScrolling();
+                }
+            }, 1200);
+        }
+    }
 });
 
 function getYoutubeVideoId(url) {
-    if (!url) return null;
-    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|\w+\/|watch\?v=)|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-    if (match && match[1]) return match[1];
-    try {
-        const u = new URL(url, window.location.origin);
-        const v = u.searchParams.get('v');
-        if (v && v.length === 11) return v;
-    } catch (e) {}
-    return null;
+    if (!url) return null;
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|\w+\/|watch\?v=)|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    try {
+        const u = new URL(url, window.location.origin);
+        const v = u.searchParams.get('v');
+        if (v && v.length === 11) return v;
+    } catch (e) {}
+    return null;
 }
 
 let searchResultsData = [];
 
 async function handleSearch() {
-    const queryInput = document.getElementById('searchQuery');
-    const query = queryInput.value.trim();
-    const resultsContainer = document.getElementById('searchResults');
-    const storyUrlInput = document.getElementById('storyUrl');
+    const queryInput = document.getElementById('searchQuery');
+    const query = queryInput.value.trim();
+    const resultsContainer = document.getElementById('searchResults');
+    const storyUrlInput = document.getElementById('storyUrl');
 
-    if (query.length < 2) {
-        resultsContainer.innerHTML = '<li>검색어를 두 글자 이상 입력해주세요.</li>';
-        return;
-    }
+    if (query.length < 2) {
+        resultsContainer.innerHTML = '<li>검색어를 두 글자 이상 입력해주세요.</li>';
+        return;
+    }
 
-    resultsContainer.innerHTML = '<li>검색 중입니다...</li>';
+    resultsContainer.innerHTML = '<li>검색 중입니다...</li>';
 
-    startLoadingAnimation('YouTube 검색 중');
+    startLoadingAnimation('YouTube 검색 중');
 
-    const res = await callWorker('searchYoutube', { query: query });
+    const res = await callWorker('searchYoutube', { query: query });
 
-    stopLoadingAnimation();
+    stopLoadingAnimation();
 
-    if (res.success && res.results.length > 0) {
-        searchResultsData = res.results;
-        let html = '';
-        res.results.forEach((item, index) => {
-            html += `<li onclick="selectSong(${index})">🎵 ${item.title}</li>`;
-        });
-        resultsContainer.innerHTML = html;
-    } else {
-        resultsContainer.innerHTML = `<li>검색 결과가 없습니다. URL을 직접 입력하거나 다시 시도하세요.</li>`;
-        storyUrlInput.value = '';
-    }
+    if (res.success && res.results.length > 0) {
+        searchResultsData = res.results;
+        let html = '';
+        res.results.forEach((item, index) => {
+            html += `<li onclick="selectSong(${index})">🎵 ${item.title}</li>`;
+        });
+        resultsContainer.innerHTML = html;
+    } else {
+        resultsContainer.innerHTML = `<li>검색 결과가 없습니다. URL을 직접 입력하거나 다시 시도하세요.</li>`;
+        storyUrlInput.value = '';
+    }
 }
 
 function selectSong(index) {
-    const selected = searchResultsData[index];
-    const storyUrlInput = document.getElementById('storyUrl');
-    const resultsContainer = document.getElementById('searchResults');
-    storyUrlInput.value = selected.url;
-    resultsContainer.innerHTML = `<li>✅ ${selected.title} 선택 완료!</li>`;
+    const selected = searchResultsData[index];
+    const storyUrlInput = document.getElementById('storyUrl');
+    const resultsContainer = document.getElementById('searchResults');
+    storyUrlInput.value = selected.url;
+    resultsContainer.innerHTML = `<li>✅ ${selected.title} 선택 완료!</li>`;
 }
 
 window.onload = () => {
-    loadContent('welcome');
+    loadContent('welcome');
 };
 </script>
 </body>
