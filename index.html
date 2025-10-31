@@ -862,14 +862,11 @@ let textSizeMode = 'small';
 let isRepeatScrolling = false; 
 
 let scrollWatchTimer = null;
-const SCROLL_SPEED = 5;        
+const SCROLL_SPEED = 5;     
 const MIN_SCROLL_SEC = 8;
 const MAX_SCROLL_SEC = 70;
 
 let storyData = []; 
-let originalTotalStories = 0; 
-let approvedUnplayedCount = 0; 
-let currentPlayOrder = 0; 
 let currentStoryIndex = -1;
 let playMode = 'random'; 
 let player = null; 
@@ -1633,22 +1630,22 @@ async function playStories(mode) {
     const approvedStories = stories.filter(s => s.status === 'Approved');
     const pendingStories = stories.filter(s => s.status === 'Pending');
     
-    const unplayedApprovedWithUrl = approvedStories.filter(s => !s.isPlayed && s.youtubeUrl && getYoutubeVideoId(s.youtubeUrl));
+    // 💥 재생 가능한 목록 (Approved & YouTube URL 유효)
+    const approvedWithUrl = approvedStories.filter(s => s.youtubeUrl && getYoutubeVideoId(s.youtubeUrl));
+    
+    // 🐛 버그 수정: 미재생 사연만 목록에 포함되도록 필터링 강화
+    const unplayedApprovedWithUrl = approvedWithUrl.filter(s => !s.isPlayed); 
 
-    approvedUnplayedCount = unplayedApprovedWithUrl.length; 
-    originalTotalStories = approvedStories.length;
-    currentPlayOrder = 0; 
-
-    if (approvedStories.length === 0) {
+    if (approvedWithUrl.length === 0) {
         mainContent.innerHTML = `
             <h2 class="content-title">🎶 사연 읽기</h2>
-            <p>현재 승인된 사연이 없습니다. 관리자 페이지에서 사연을 승인해 주세요.</p>
+            <p>현재 승인된 사연이 없거나, 승인된 사연에 유효한 신청곡 URL이 없습니다. 🔑</p>
         `;
         frequencyDisplay.textContent = '승인된 사연 없음';
         return;
     }
 
-    if (approvedUnplayedCount === 0) {
+    if (unplayedApprovedWithUrl.length === 0) {
         if (pendingStories.length === 0) {
             mainContent.innerHTML = `
                 <h2 class="content-title">🎶 사연 읽기</h2>
@@ -1670,9 +1667,11 @@ async function playStories(mode) {
     storyData = unplayedApprovedWithUrl;
     
     if (playMode === 'sequential') {
+        // 순차 재생: timestamp 오름차순 (먼저 들어온 사연부터)
         storyData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         currentStoryIndex = 0;
     } else {
+        // 랜덤 재생: 셔플
         shuffleArray(storyData);
         currentStoryIndex = 0;
     }
@@ -1741,7 +1740,7 @@ function onPlayerReady() {
 }
 
 function onPlayerStateChange(event) {
-    if (event.data === 1) { 
+    if (event.data === 1) { // 재생 중
         if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
             const story = storyData[currentStoryIndex];
 
@@ -1750,6 +1749,7 @@ function onPlayerStateChange(event) {
                 lastStartedRowNum = story.rowNum;
                 lastStartedStamp = now;
 
+                // 서버에 재생 시작 시간 기록 (isPlayed는 완료 시점에만 설정)
                 (async () => {
                     try {
                         await callWorker('setStoryStarted', {
@@ -1762,15 +1762,11 @@ function onPlayerStateChange(event) {
                     }
                 })();
             }
-
-            const storyInfoElement = document.getElementById('currentStoryInfo');
-            if (storyInfoElement) {
-                storyInfoElement.textContent = `${approvedUnplayedCount}개 사연 중 ${currentPlayOrder}번째`;
-            }
+            // ❌ 재생 정보 문구 삭제 (currentPlayOrder 관련 로직 제거)
         }
     }
 
-    if (event.data === 0) { 
+    if (event.data === 0) { // 재생 완료
         if (currentStoryIndex !== -1 && storyData[currentStoryIndex]) {
             const story = storyData[currentStoryIndex];
 
@@ -1781,6 +1777,7 @@ function onPlayerStateChange(event) {
                 console.warn('[Playback] setStoryPlayed failed (ignored):', err);
             });
 
+            // ⚠️ 완료된 사연은 목록에서 제거
             storyData.splice(currentStoryIndex, 1);
             currentStoryIndex = -1;
 
@@ -1792,48 +1789,45 @@ function onPlayerStateChange(event) {
 }
 
 function playNextStory() {
-    const storyInfoElement = document.getElementById('currentStoryInfo');
+    // const storyInfoElement = document.getElementById('currentStoryInfo'); // ❌ 제거
     const playerArea = document.getElementById('playerArea');
 
     if (storyData.length === 0) {
         if (playerArea) {
-             playerArea.innerHTML = `<p>다음 사연이 없습니다. 다시 재생 버튼을 눌러 상태를 갱신해 주세요.</p>`;
+             playerArea.innerHTML = `<p>다음 사연이 없습니다. <br>재생 버튼을 다시 눌러 상태를 갱신해 주세요.</p>`;
         }
         frequencyDisplay.textContent = '재생 목록 종료';
-        if (storyInfoElement) {
-            const totalPlayed = approvedUnplayedCount > 0 ? approvedUnplayedCount : originalTotalStories;
-            storyInfoElement.textContent = `${totalPlayed}개 사연 중 ${totalPlayed}번째 (완료)`; 
-        }
+        // ❌ 재생 정보 문구 삭제
         if (player) player.stopVideo();
         return;
     }
 
-    currentStoryIndex = 0; 
-
-    currentPlayOrder++;
+    currentStoryIndex = 0; // 셔플 또는 순차 정렬된 목록의 첫 번째 항목을 재생합니다.
+    // currentPlayOrder++; // ❌ 제거
 
     const story = storyData[currentStoryIndex];
     const videoId = getYoutubeVideoId(story.youtubeUrl);
 
     if (videoId && player) {
         player.loadVideoById(videoId);
-        frequencyDisplay.textContent = `ON AIR: ${story.name} 님의 사연 (채널: ${currentChannelName})`;
+
+        // 💡 재생 모드만 표시하도록 문구 변경
+        const modeText = playMode === 'random' ? '랜덤으로 재생하는 중' : '순서대로 재생하는 중';
+        frequencyDisplay.textContent = `${modeText}: ${story.name} 님의 사연 (채널: ${currentChannelName})`;
 
         const scrollingText = document.getElementById('scrollingText');
         scrollingText.textContent = `[${story.name} 님의 사연]\n${story.content}`;
 
-        if (storyInfoElement) {
-            storyInfoElement.textContent = `${approvedUnplayedCount}개 사연 중 ${currentPlayOrder}번째`;
-        }
+        // ❌ 재생 정보 문구 삭제
         
         if (playerArea) {
-             playerArea.innerHTML = ``;
+             playerArea.innerHTML = `<p>지금은 **${playMode === 'random' ? '랜덤' : '순차'} 재생** 모드입니다.</p>`; // 💡 재생 모드 안내 추가
         }
 
         restartCurrentScrolling();
     } else {
         console.error('유효하지 않은 YouTube URL 또는 ID: ', story.youtubeUrl);
-        currentPlayOrder--; // 유효하지 않은 URL은 카운트를 되돌리고 리스트에서 제외
+        // currentPlayOrder--; // ❌ 제거
         storyData.splice(currentStoryIndex, 1);
         currentStoryIndex = -1;
         playNextStory();
@@ -1887,6 +1881,7 @@ function setScrollAnimationDuration(el) {
     if (durationSec < MIN_SCROLL_SEC) durationSec = MIN_SCROLL_SEC;
     if (durationSec > MAX_SCROLL_SEC) durationSec = MAX_SCROLL_SEC;
 
+    el.style.setProperty('--scrollDur', `${durationSec}s`); // CSS 변수 업데이트
     el.style.animation = `scrollUp ${durationSec}s linear forwards`;
 }
 
