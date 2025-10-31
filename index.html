@@ -775,13 +775,6 @@
         padding: 5px 3px;
     }
 }
-/* 추가/수정된 CSS */
-#currentStoryInfo {
-    margin-bottom: 10px;
-    text-align: center;
-    font-size: 1.05em;
-    color: var(--dark-wood);
-}
 </style>
 
 </head>
@@ -1044,7 +1037,8 @@ function loadContent(page, skipHistory = false) {
     if (page === 'welcome') {
         frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
     } else if (page === 'listen' && currentChannelName) {
-         frequencyDisplay.textContent = `[ON AIR] 채널: ${currentChannelName}`;
+        // 주파수 창 간소화 (최신 버전 반영)
+        frequencyDisplay.textContent = `[ON AIR] 채널: ${currentChannelName}`;
     } else {
         frequencyDisplay.textContent = `[${getChannelTitle(page)}] 채널`;
     }
@@ -1524,6 +1518,7 @@ async function fetchStoriesForManagement() {
         stories.forEach(story => {
             let statusText = story.status;
             let statusClass;
+            // 최신 코드의 상태 표시 로직 통합 (isPlayed를 명시적으로 표시)
             statusClass = `status-${story.status.toLowerCase()}`;
             if (story.isPlayed) {
                  statusText += ' (완료)';
@@ -1621,7 +1616,7 @@ async function playStories(mode) {
     playMode = mode;
 
     const playerArea = document.querySelector('#mainContent .scroll-text-box #playerArea');
-    const storyInfoElement = document.getElementById('currentStoryInfo'); 
+    const storyInfoElement = document.getElementById('currentStoryInfo');
     
     if (playerArea) {
         playerArea.innerHTML = `<p>사연을 불러오는 중...</p>`;
@@ -1632,6 +1627,7 @@ async function playStories(mode) {
 
     startLoadingAnimation('사연을 불러오는 중');
 
+    // 최신 코드의 로직을 사용하여 모든 스토리를 불러와 필터링
     const allStoriesRes = await callWorker('getAllStories', { pin: currentChannelPin, password: managerPassword });
     stopLoadingAnimation();
 
@@ -1645,6 +1641,7 @@ async function playStories(mode) {
     const pendingStories = stories.filter(s => s.status === 'Pending');
     
     const approvedWithUrl = approvedStories.filter(s => s.youtubeUrl && getYoutubeVideoId(s.youtubeUrl));
+    // 1. 중복 재생 방지 로직 적용
     const unplayedApprovedWithUrl = approvedWithUrl.filter(s => !s.isPlayed); 
 
     if (approvedWithUrl.length === 0) {
@@ -1733,7 +1730,7 @@ function onYouTubeIframeAPIReady() {
             'modestbranding': 1,
             'autoplay': 1,
             'disablekb': 1,
-            'iv_load_policy': 3, 
+            'iv_load_policy': 3, // 3. 광고 최소화 옵션 적용 (인포 카드 비활성화)
             'showinfo': 0,
             'cc_load_policy': 0
         },
@@ -1770,6 +1767,11 @@ function onPlayerStateChange(event) {
                     }
                 })();
             }
+             // 2. 간소화된 재생 정보 표시 (이전 복잡한 카운트 삭제)
+            const storyInfoElement = document.getElementById('currentStoryInfo');
+            if (storyInfoElement) {
+                 storyInfoElement.textContent = playMode === 'random' ? '랜덤으로 재생하는 중' : '순서대로 재생하는 중';
+            }
         }
     }
 
@@ -1784,6 +1786,9 @@ function onPlayerStateChange(event) {
                 console.warn('[Playback] setStoryPlayed failed (ignored):', err);
             });
 
+            // playedCount++ 제거 (더 이상 사용하지 않음)
+
+            // 1. 중복 재생 방지 로직: 재생 완료 후 목록에서 제거
             storyData.splice(currentStoryIndex, 1);
             currentStoryIndex = -1;
 
@@ -1810,6 +1815,7 @@ function playNextStory() {
         return;
     }
 
+    // 1. 중복 재생 방지 로직: 항상 목록의 0번째 재생 후 제거
     currentStoryIndex = 0; 
 
     const story = storyData[currentStoryIndex];
@@ -1818,12 +1824,14 @@ function playNextStory() {
     if (videoId && player) {
         player.loadVideoById(videoId);
 
+        // 2. 간소화된 주파수 창 표시
         frequencyDisplay.textContent = `ON AIR: ${story.name} 님의 사연 (채널: ${currentChannelName})`;
 
         const scrollingText = document.getElementById('scrollingText');
-        
+        // 사연 창에 사연 외 문구 제거 (최신 코드 반영)
         scrollingText.textContent = `[${story.name} 님의 사연]\n${story.content}`;
 
+        // 2. 간소화된 재생 정보 표시
         if (storyInfoElement) {
              storyInfoElement.textContent = playMode === 'random' ? '랜덤으로 재생하는 중' : '순서대로 재생하는 중';
         }
