@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>라디오는 사연을 싣고</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    
+    <link rel="icon" type="image/png" href="https://i.imgur.com/xgjafB5.png">
+    <link rel="shortcut icon" href="https://i.imgur.com/xgjafB5.png">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+
+<style>
+    @font-face {
+        font-family: 'DungGeunMo';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    :root {
+        --dark-wood: #4B2F2A;
+        --mid-wood: #6D4C41;
+        --dial-color: #F5DEB3;
+        --panel-bg: #88624E;
+        --screen-bg: rgba(255, 255, 255, 0.95);
+        --font-color: #333;
+        --gowun-dodum: 'Gowun Dodum', sans-serif;
+        --retro-font: 'DungGeunMo', monospace;
+        --error-color: var(--dark-wood);
+        --scrollDur: 57s;
+    }
+
+    body {
+        font-family: var(--gowun-dodum);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100dvh;
+        background-color: #f4f4f4;
+        transition: background-color 0.5s;
+    }
+
+    h1, h2, h3, p, div, span, button, li, table, a, select, textarea, input {
+        font-family: var(--gowun-dodum) !important;
+    }
+
+    .main-content > p { font-size: 1.1em; }
+    .main-content h3 { font-size: 1.3em; font-weight: normal; }
+
+    .radio-wrapper {
+        position: relative;
+        width: min(95vw, 800px);
+        aspect-ratio: 4 / 3;
+        max-height: min(85vh, 600px);
+        height: auto;
+        padding-top: 0;
+        box-sizing: content-box;
+    }
+
+    .radio-container {
+        width: 100%;
+        height: 100%;
+        background-color: var(--mid-wood);
+        border-radius: 20px;
+        box-shadow: 0 0 0 15px var(--dark-wood),
+                    10px 10px 30px rgba(0, 0, 0, 0.5);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
+        color: var(--font-color);
+        transition: all 0.5s;
+        z-index: 10;
+    }
+
+    .radio-screen {
+        flex: 1;
+        background-color: var(--screen-bg);
+        border-radius: 5px;
+        overflow-y: auto;
+        position: relative;
+        margin-bottom: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .main-content {
+        flex-grow: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .main-content h2 {
+        border-bottom: 2px solid var(--panel-bg);
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+
+    .main-content .menu-wrapper {
+        display: flex;
+        justify-content: space-around;
+        gap: 20px;
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    .main-content .menu-item-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1 1 30%;
+        min-width: 180px;
+        text-align: center;
+        margin: 0;
+    }
+
+    .main-content .menu-item-wrapper > button {
+        width: 100%;
+        max-width: 250px;
+        padding: 15px 15px !important;
+        font-size: 1.1em !important;
+        font-weight: normal;
+        margin-bottom: 5px;
+        border-radius: 8px;
+        background-color: var(--dial-color);
+        color: var(--dark-wood);
+        border: 2px solid var(--panel-bg);
+        font-family: var(--gowun-dodum) !important;
+    }
+
+    .main-content .menu-item-wrapper > p {
+        font-size: 0.85em;
+        margin: 0;
+        line-height: 1.3;
+    }
+
+@media (max-width: 768px), (max-aspect-ratio: 3/4) {
+    body {
+        padding: 16px 14px;
+    }
+
+    .radio-wrapper {
+        width: 100%;
+        height: 92dvh;
+        height: 92svh;
+        max-height: 92dvh;
+        aspect-ratio: auto;
+        padding: 0 12px;
+        box-sizing: border-box;
+    }
+
+    .radio-container {
+        height: 100%;
+        grid-template-rows: 6fr 4fr;
+        padding: 14px;
+        box-shadow: 0 0 0 8px var(--dark-wood), 4px 4px 12px rgba(0,0,0,.4);
+    }
+
+    .radio-screen {
+        min-height: 0;
+        max-height: 100%;
+        overflow-y: auto;
+        position: relative;       margin-bottom: 10px;
+        padding: 10px 10px 12px;
+    }
+
+    .control-panel {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+        .control-panel > .dial-control {
+            display: none;
+        }
+
+        .dial-button-group {
+            display: flex !important;
+            order: 2;
+            width: 100%;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+
+        .dial-button-group .dial-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .dial-button-group .radio-dial,
+        .radio-dial {
+            width: 72px;
+            height: 72px;
+            font-size: .9em;
+            margin: 5px auto;
+        }
+
+        .frequency-area {
+            order: 1;
+            width: 95%;
+            padding: 5px 0;
+        }
+
+        .center-buttons {
+            order: 3;
+            width: 100%;
+            justify-content: space-around;
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+        }
+
+        .center-buttons button {
+            font-size: 0.9em;
+            padding: 10px 5px;
+            border-radius: 8px !important;
+            min-height: 44px;
+        }
+
+        .story-player-area {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .story-scroll-container {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .youtube-panel {
+            width: 100%;
+            min-height: 0;
+        }
+
+        .youtube-box {
+            height: auto;
+            padding: 0;
+        }
+
+        .main-content .menu-wrapper {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .main-content .menu-item-wrapper {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .main-content .menu-item-wrapper > p {
+            text-align: left;
+        }
+
+        .app-footer {
+            display: none;
+        }
+
+        @media (max-width: 360px) {
+            .qr-size {
+                width: 140px !important;
+                height: 140px !important;
+            }
+        }
+    }
+
+    #searchResults {
+        list-style: none;
+        padding: 5px 0 0 0;
+        margin: 0;
+    }
+    #searchResults li {
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-top: 5px;
+        cursor: pointer;
+        background-color: rgba(255, 255, 255, 0.7);
+        border: 1px dashed var(--panel-bg);
+        font-size: 0.9em;
+    }
+    #searchResults li:hover {
+        background-color: var(--dial-color);
+    }
+
+    .story-player-area {
+        display: flex; 
+        flex-grow: 1;
+        width: 100%;
+        min-height: 300px;
+    }
+
+    .scroll-text-box {
+        flex: 3; 
+        overflow-y: hidden;
+        position: relative;
+        padding: 10px;
+        padding-right: 20px;
+        padding-left: 5px;
+        border-right: 1px solid #ccc;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .story-text-scrolling {
+        position: absolute;
+        width: 100%;
+        color: var(--dark-wood);
+        text-align: center;
+        top: 100%;
+        left: -10px;
+        padding: 0 14px;
+        white-space: pre-wrap;
+        animation: scrollUp var(--scrollDur) linear forwards;
+    }
+
+    .story-text-scrolling.size-small { font-size: 1.2em; }
+    .story-text-scrolling.size-large { font-size: 2.4em; }
+
+    @keyframes scrollUp {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-2000px); }
+    }
+
+    .scroll-text-box h2,
+    .scroll-text-box p#playerArea {
+        flex-shrink: 0;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+
+    .story-scroll-container {
+        flex-grow: 1;
+        overflow: hidden;
+        position: relative;
+        padding: 10px 0;
+    }
+
+    .youtube-panel {
+        flex: 2; 
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        height: 100%;
+    }
+
+    .youtube-box {
+        position: relative;
+        flex-grow: 1;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        transition: opacity 0.3s;
+    }
+    #youtubePlayer,
+    #youtubePlayer iframe {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        z-index: 1;
+        display: block;
+    }
+
+    .playback-controls {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+.icon-button.is-on {
+    background-color: var(--dial-color);
+    color: var(--dark-wood);
+}
+
+    .icon-button {
+        background-color: var(--dark-wood);
+        color: var(--dial-color);
+        border: 2px solid var(--panel-bg);
+        border-radius: 5px;
+        width: 40px;
+        height: 40px;
+        font-size: 1.5em;
+        line-height: 1;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.1s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .icon-button:hover { background-color: #331f1d; }
+    .icon-button[title="랜덤 재생"] { font-family: Arial, sans-serif !important; }
+
+    .font-toggle {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        margin-left: 12px;
+    }
+    .font-btn {
+        min-width: 36px;
+        height: 36px;
+        border: 2px solid var(--panel-bg);
+        border-radius: 5px;
+        background: #fff;
+        color: var(--dark-wood);
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 8px;
+        transition: background-color .15s ease, transform .05s ease;
+        font-family: var(--gowun-dodum) !important;
+    }
+    .font-btn:active { transform: scale(0.98); }
+    .font-btn.active { background: var(--dial-color); }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: var(--dark-wood);
+        font-size: 1.1em;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group textarea,
+    .status-select {
+        width: 100%;
+        padding: 12px;
+        font-size: 1.1em;
+        font-family: var(--gowun-dodum) !important;
+        background-color: var(--dial-color);
+        color: var(--dark-wood);
+        border: 2px solid var(--panel-bg);
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .center-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+        align-self: center;
+    }
+    .center-buttons button {
+        flex-grow: 0;
+        width: auto;
+        padding: 8px 15px;
+        background-color: var(--dial-color);
+        color: var(--dark-wood);
+        border: 2px solid var(--panel-bg);
+        border-radius: 8px;
+        font-size: 0.9em;
+        font-family: var(--gowun-dodum) !important;
+        font-weight: normal;
+        cursor: pointer;
+    }
+
+    .main-content button[type="submit"],
+    .modal-button {
+        padding: 10px 20px;
+        background-color: var(--dark-wood);
+        color: var(--dial-color);
+        border: 2px solid var(--panel-bg);
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: normal;
+        cursor: pointer;
+        transition: background-color 0.1s;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        width: auto;
+        display: block;
+        margin-left: 0;
+        margin-right: auto;
+        box-sizing: border-box;
+        font-family: var(--gowun-dodum) !important;
+    }
+    .modal-button {
+        width: 100%;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 0;
+    }
+    .main-content button[type="submit"]:hover,
+    .modal-button:hover { background-color: #331f1d; }
+
+    #writeForm button[type="button"] {
+        padding: 8px 15px;
+        font-size: 1.1em;
+        background-color: var(--panel-bg);
+        color: white;
+        border-radius: 8px;
+        width: auto !important;
+        display: inline-block;
+        border: none;
+        margin-top: 5px;
+        font-weight: normal;
+        font-family: var(--gowun-dodum) !important;
+    }
+
+    .qr-size {
+        width: 160px !important;
+        height: 160px !important;
+        max-width: 160px;
+        max-height: 160px;
+        background-color: white;
+        padding: 10px;
+        border: 1px solid #333;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-content {
+        background-color: var(--screen-bg);
+        border: 8px solid var(--dark-wood);
+        border-radius: 15px;
+        padding: 30px;
+        width: min(92vw, 420px);
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        font-family: var(--gowun-dodum);
+    }
+
+    .modal-overlay {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .modal-overlay.show { display: flex !important; }
+
+    .modal-content h3 {
+        color: var(--dark-wood);
+        font-size: 1.5em;
+        border-bottom: 2px dashed var(--panel-bg);
+        padding-bottom: 10px;
+        margin-top: 0;
+    }
+    .modal-content strong {
+        color: #d90000;
+        font-size: 1.2em;
+        display: block;
+        padding: 5px 0;
+        font-family: var(--gowun-dodum);
+        font-weight: normal;
+    }
+
+    .control-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: var(--panel-bg);
+        border: 2px solid var(--dark-wood);
+        border-radius: 5px;
+        padding: 15px;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    .dial-control {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex-shrink: 0;
+        width: 100px;
+        margin: 0 10px;
+    }
+    .dial-button-group { display: none; }
+
+    .radio-dial {
+        width: 70px;
+        height: 70px;
+        background-color: var(--dial-color);
+        border: 4px solid var(--dark-wood);
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3), inset 0 0 3px rgba(0, 0, 0, 0.5);
+        transition: all 0.1s;
+        padding: 5px;
+        box-sizing: border-box;
+        line-height: 1.2;
+        font-size: 0.85em;
+        font-family: var(--gowun-dodum) !important;
+    }
+    .radio-dial:hover { background-color: #fff8e8; }
+    .dummy-dial-label {
+        font-size: 0.7em;
+        color: var(--dial-color);
+        margin-top: 5px;
+        text-transform: uppercase;
+    }
+
+    .frequency-area {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 10px;
+    }
+    .frequency-display-inner {
+        position: relative;
+        width: 90%;
+        height: 30px;
+        background-color: #333;
+        border: 1px solid #000;
+        border-radius: 3px;
+        text-align: center;
+        line-height: 30px;
+        font-size: 0.9em;
+        color: #FFD700;
+        font-family: var(--retro-font) !important;
+        box-shadow: inset 0 0 5px rgba(255, 215, 0, 0.5);
+        overflow: hidden;
+    }
+
+    .app-footer {
+        margin-top: 20px;
+        color: #aaaaaa;
+        font-size: 0.8em;
+        font-family: var(--gowun-dodum);
+    }
+
+    .story-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+        border: 1px solid #ddd;
+    }
+    .story-table th,
+    .story-table td {
+        border: 1px solid #ddd;
+        padding: 10px 8px;
+        text-align: left;
+        font-family: var(--gowun-dodum) !important;
+    }
+    .story-table td[title] { cursor: help; }
+
+    .button-group button {
+        background-color: var(--dark-wood) !important;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 15px !important;
+        margin-right: 0 !important;
+        width: 100%;
+        text-align: center;
+        transition: background-color 0.1s;
+        font-size: 1.1em;
+        font-weight: normal;
+        font-family: var(--gowun-dodum) !important;
+    }
+    .button-group button:hover { background-color: #331f1d !important; }
+
+    .story-table td[class^="status-"] {
+        font-weight: 700;
+        text-align: center;
+        border-left: 4px solid transparent;
+        transition: background-color .2s ease, box-shadow .2s ease, color .2s ease;
+    }
+    .story-table td.status-approved { color: #0f5132; text-shadow: 0 0 6px rgba(25,135,84,0.45); }
+    .story-table td.status-pending { color: #664d03; text-shadow: 0 0 6px rgba(255,193,7,0.5); }
+    .story-table td.status-rejected { color: #842029; text-shadow: 0 0 6px rgba(220,53,69,0.45); }
+
+    .youtube-box { position: relative; }
+
+    .youtube-box::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(244,244,244,0.99);
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        font-size: 0.95em;
+        color: #333;
+        padding: 10px 16px;
+        border-radius: 6px;
+        transition: opacity .2s ease;
+        opacity: 1;
+    }
+
+    .youtube-box:hover::after,
+    .youtube-box:focus-within::after {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+        .youtube-box::after {
+            opacity: 0;
+            pointer-events: none;
+        }
+    }
+
+    .email-error-inline {
+        margin-top: 4px;
+        color: #c62828;
+        font-size: 0.9em;
+        display: none;
+    }
+    .email-error-inline.show {
+        display: block;
+    }
+@media (max-width: 480px) {
+    .frequency-area {
+        width: 100%;
+    }
+
+    .center-buttons {
+        display: flex; 
+        flex-wrap: nowrap; 
+        gap: 6px;
+        justify-content: center;
+    }
+
+    .center-buttons button {
+        flex: 0 1 auto; 
+        min-width: 70px;  
+        padding: 6px 4px;  
+        font-size: 0.78rem; 
+        line-height: 1.1;
+        border-radius: 6px !important;
+    }
+
+    .frequency-display-inner {
+        width: 100%;
+        margin-bottom: 6px;
+    }
+}
+
+@media (max-width: 360px) {
+    .center-buttons {
+        gap: 4px;
+    }
+    .center-buttons button {
+        min-width: 64px;
+        font-size: 0.7rem;
+        padding: 5px 3px;
+    }
+}
+</style>
+
+</head>
+<body>
+
+    <div class="radio-wrapper">
+        <div class="radio-container">
+
+            <div class="radio-screen" id="radioScreen">
+                <div class="main-content" id="mainContent">
+                    <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
+                    <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
+                    <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
+                    <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
+                </div>
+            </div>
+
+            <div class="control-panel">
+
+                <div class="dial-control">
+                    <div class="radio-dial" onclick="loadContent('write')">사연<br>쓰기</div>
+                    <div class="dummy-dial-label">VOLUME</div>
+                </div>
+
+                <div class="dial-button-group">
+                    <div class="dial-control">
+                        <div class="radio-dial" onclick="loadContent('write')">사연<br>쓰기</div>
+                        <div class="dummy-dial-label">VOLUME</div>
+                    </div>
+                    <div class="dial-control">
+                        <div class="radio-dial" onclick="loadContent('manage_menu')">사연<br>관리</div>
+                        <div class="dummy-dial-label">TUNING</div>
+                    </div>
+                </div>
+
+                <div class="frequency-area">
+                    <div class="frequency-display-inner" id="frequencyDisplay">
+                        라디오는 사연을 싣고 - 환영합니다!
+                    </div>
+                    <div class="center-buttons">
+                        <button onclick="showQrCode()">QR CODE</button>
+                        <button onclick="loadContent('welcome')">HOME</button>
+                        <button onclick="goBack()">BACK</button>
+                    </div>
+                </div>
+
+                <div class="dial-control">
+                    <div class="radio-dial" onclick="loadContent('manage_menu')">사연<br>관리</div>
+                    <div class="dummy-dial-label">TUNING</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-footer">
+        Copyright © 2025 휴르쌤. All rights reserved.
+    </div>
+
+    <div id="resultModalOverlay" class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="modalTitle">채널 생성 완료</h3>
+            <p id="modalMessage"></p>
+            <p>핀 번호: <strong id="modalPin"></strong></p>
+            <p>관리 비밀번호: <strong id="modalPassword"></strong></p>
+            <button class="modal-button" onclick="closeModal()">확인</button>
+        </div>
+    </div>
+<script>
+const WORKER_API_ENDPOINT = 'https://radio.bbglara.workers.dev/';
+
+const mainContent = document.getElementById('mainContent');
+const frequencyDisplay = document.getElementById('frequencyDisplay');
+const radioScreen = document.getElementById('radioScreen');
+
+let currentChannelPin = null;
+let currentChannelName = null;
+let managerPassword = null;
+let isStorySubmitted = false;
+
+const pageHistory = [];
+const MAX_HISTORY_SIZE = 5;
+
+
+let textSizeMode = 'small'; 
+let isRepeatScrolling = false; 
+
+let scrollWatchTimer = null;
+const SCROLL_SPEED = 5;        
+const MIN_SCROLL_SEC = 8;
+const MAX_SCROLL_SEC = 70;
+
+let storyData = []; 
+let shuffledStoryData = []; 
+let originalTotalStories = 0; 
+let approvedUnplayedCount = 0; 
+let currentPlayOrder = 0; 
+let currentStoryIndex = -1; 
+let playMode = 'random'; 
+let player = null; 
+
+let lastStartedRowNum = null;
+let lastStartedStamp = 0;
+
+let loadingInterval = null;
+
+function looksLikeCommonEmailTypo(domain) {
+    const obviousTypos = [
+        'gmal.com', 'gmai.com', 'gmaii.com', 'gmail.co', 'gmail.con',
+        'naver.net', 'nvaer.com', 'naver.co',
+        'daum.com',
+        'kako.com', 'kakao.co'
+    ];
+    return obviousTypos.includes(domain);
+}
+
+function isEmailAllowed(value) {
+    if (!value) return false;
+    const t = value.trim();
+    const basicPattern = /^[^@]+@[^@]+\.[^@]+$/;
+    if (!basicPattern.test(t)) return false;
+
+    const domain = t.split('@')[1].toLowerCase();
+    if (looksLikeCommonEmailTypo(domain)) return false;
+
+    const common = [
+        'gmail.com', 'naver.com', 'daum.net', 'kakao.com',
+        'outlook.com', 'hotmail.com'
+    ];
+    if (common.includes(domain)) return true;
+
+    const allowEnds = [
+        '.kr', '.go.kr', '.or.kr', '.sch.kr', '.es.kr', '.ms.kr', '.hs.kr', '.korea.kr'
+    ];
+    if (allowEnds.some(sfx => domain.endsWith(sfx))) return true;
+
+    return true;
+}
+
+async function callWorker(action, data = {}) {
+    try {
+        const response = await fetch(WORKER_API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, ...data })
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({ message: '알 수 없는 서버 응답 형식' }));
+            throw new Error(`HTTP ${response.status}: ${errorBody.message || response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Worker 통신 실패:', error);
+        return { success: false, message: `서버 통신 오류: ${error.message}` };
+    }
+}
+
+function startLoadingAnimation(baseMessage) {
+    stopLoadingAnimation();
+    let dots = 1;
+    const loadingTitle = 'loading';
+    loadingInterval = setInterval(() => {
+        let dotString = '.'.repeat(dots);
+        frequencyDisplay.textContent = `[${loadingTitle}] ${baseMessage}${dotString}`;
+        dots++;
+        if (dots > 3) dots = 1;
+    }, 500);
+}
+function stopLoadingAnimation() {
+    if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+    }
+}
+
+function showModal(title, pin, password, emailFailed = false) {
+    const msgEl = document.getElementById('modalMessage');
+    if (emailFailed) {
+        msgEl.innerHTML = '사연 보내기 및 관리자 로그인을 위해<br>다음 정보를 꼭 저장해 주세요!<br><br><strong style="color:#c62828;">※ 이메일이 발송되지 않았어요. 아래 PIN/비번을 꼭 캡처해 두세요.</strong>';
+    } else {
+        msgEl.innerHTML = '사연 보내기 및 관리자 로그인을 위해<br>다음 정보를 꼭 저장해 주세요!';
+    }
+
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalPin').textContent = pin;
+    document.getElementById('modalPassword').textContent =
+        (password && String(password).trim() !== '')
+            ? password
+            : '(처음 입력한 4자리 비밀번호를 사용하세요)';
+    document.getElementById('resultModalOverlay').classList.add('show');
+}
+function closeModal() {
+    document.getElementById('resultModalOverlay').classList.remove('show');
+    loadContent('manage_menu');
+}
+
+function initFontToggleListeners() {
+    const sm = document.getElementById('fontSmallBtn');
+    const lg = document.getElementById('fontLargeBtn');
+    if (!sm || !lg) return;
+    sm.classList.toggle('active', textSizeMode === 'small');
+    lg.classList.toggle('active', textSizeMode === 'large');
+
+    sm.onclick = () => setTextSize('small');
+    lg.onclick = () => setTextSize('large');
+}
+function setTextSize(mode) {
+    textSizeMode = (mode === 'large') ? 'large' : 'small';
+    const sm = document.getElementById('fontSmallBtn');
+    const lg = document.getElementById('fontLargeBtn');
+    if (sm && lg) {
+        sm.classList.toggle('active', textSizeMode === 'small');
+        lg.classList.toggle('active', textSizeMode === 'large');
+    }
+    applyTextSize(true);
+}
+function applyTextSize(preserveProgress) {
+    const el = document.getElementById('scrollingText');
+    if (!el) return;
+
+    let savedTime = null;
+    let anim = null;
+    if (preserveProgress && el.getAnimations) {
+        anim = el.getAnimations()[0];
+        if (anim && anim.currentTime != null) savedTime = anim.currentTime;
+    }
+
+    el.classList.remove('size-small', 'size-large');
+    el.classList.add(textSizeMode === 'large' ? 'size-large' : 'size-small');
+
+    if (savedTime !== null && anim) {
+        try { anim.currentTime = savedTime; } catch (e) {}
+    }
+}
+
+function getChannelTitle(page) {
+    switch (page) {
+        case 'listen': return 'ON AIR';
+        case 'write': return '사연 보내기';
+        case 'manage_menu':
+        case 'create_channel':
+        case 'login_manage_stories':
+        case 'login_listen':
+        case 'list_stories':
+            return '관리자';
+        case 'qrcode': return 'QR 코드';
+        default: return '라디오는 사연을 싣고';
+    }
+}
+
+function loadContent(page, skipHistory = false) {
+    let html = '';
+
+    stopLoadingAnimation();
+
+    if (!skipHistory) {
+        if (pageHistory.length === 0 || pageHistory[pageHistory.length - 1] !== page) {
+            pageHistory.push(page);
+            if (pageHistory.length > MAX_HISTORY_SIZE) pageHistory.shift();
+        }
+        history.replaceState({ page: page }, null, `#${page}`);
+    }
+
+    if (page === 'welcome') {
+        frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
+    } else {
+        frequencyDisplay.textContent = `[${getChannelTitle(page)}] 채널`;
+    }
+
+    switch (page) {
+        case 'welcome':
+            html = `
+                <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
+                <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
+                <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
+                <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
+            `;
+            break;
+
+        case 'listen':
+            if (!currentChannelPin || !currentChannelName) {
+                html = `<p style="color: red;">🎶 사연 보기는 관리자 채널 로그인 후 접근할 수 있습니다. 🔑</p>`;
+            } else {
+                html = `
+                    <div class="story-player-area">
+                        <div class="scroll-text-box">
+                            <h2 class="content-title">🎶 사연 보기</h2>
+                            <p id="playerArea" style="margin-top: 10px;">재생 버튼을 눌러주세요.</p>
+                            <div class="story-scroll-container">
+                                <p id="scrollingText" class="story-text-scrolling size-${textSizeMode}" style="animation:none; top:100%;"></p>
+                            </div>
+                        </div>
+                        <div class="youtube-panel">
+                            <div class="playback-controls">
+                                <button id="repeatScrollBtn" class="icon-button ${isRepeatScrolling ? 'is-on' : ''}" title="사연 반복 재생" onclick="toggleRepeatScrolling(this)">&#8634;</button>
+                                <button class="icon-button" title="순차 재생" onclick="playStories('sequential')">&#9654;</button>
+                                <button class="icon-button" title="랜덤 재생" onclick="playStories('random')">&#8644;</button>
+                                <div class="font-toggle">
+                                    <button id="fontSmallBtn" class="font-btn ${textSizeMode === 'small' ? 'active' : ''}">a</button>
+                                    <button id="fontLargeBtn" class="font-btn ${textSizeMode === 'large' ? 'active' : ''}">A</button>
+                                </div>
+                            </div>
+                            <div id="currentStoryInfo"></div>
+                            <div class="youtube-box">
+                                <div id="youtubePlayer"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            break;
+
+        case 'write':
+        case 'pin_entry':
+            html = `
+                <h2 class="content-title">📝 사연 쓰기</h2>
+                <form id="pinForm">
+                    <div class="form-group">
+                        <label for="pin">주파수를 맞춰주세요! (6자리 핀번호)</label>
+                        <input type="text" id="pin" maxlength="6" required>
+                    </div>
+                    <button type="submit">채널 입장</button>
+                </form>
+                <div id="writeForm" style="display:none;">
+                    <h3 class="content-title" id="channelNameDisplay"></h3>
+                    <form id="storyForm">
+                        <div class="form-group">
+                            <label for="storyName">이름:</label>
+                            <input type="text" id="storyName" placeholder="홍길동" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="storyContent">사연 내용:</label>
+                            <textarea id="storyContent" rows="4" placeholder="보내고 싶은 마음을 담아 주세요."></textarea>
+                        </div>
+                        <div class="form-group" style="border-bottom: 1px solid #ddd; padding-bottom: 15px;">
+                            <label for="searchQuery">원하는 곡 검색 (가수, 제목 순서로 쓰기):</label>
+                            <input type="text" id="searchQuery" placeholder="예: 윤하, 사건의 지평선" style="margin-bottom: 5px;">
+                            <button type="button" onclick="handleSearch()" >곡 검색</button>
+                            <ul id="searchResults"></ul>
+                        </div>
+                        <div class="form-group">
+                            <label for="storyUrl">선택된 유튜브 URL (또는 직접 입력):</label>
+                            <input type="text" id="storyUrl" placeholder="선택 후 자동 입력됩니다." required>
+                        </div>
+                        <button type="submit">사연 보내기</button>
+                    </form>
+                    <p id="submissionStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
+                </div>
+            `;
+            break;
+
+        case 'manage_menu':
+            html = `
+                <h2 class="content-title">🔑 관리자 메뉴</h2>
+                <div class="menu-wrapper">
+                    <div class="menu-item-wrapper">
+                        <button onclick="loadContent('create_channel')">채널 만들기</button>
+                        <p>모든 사연이 재생된 채널은 <br> 자정에 자동으로 삭제됩니다.</p>
+                    </div>
+                    <div class="menu-item-wrapper">
+                        <button onclick="loadContent('login_manage_stories')">사연 관리 (승인/거절)</button>
+                        <p>로그인 후 도착한 사연을 <br> 승인/거절합니다. (승인 상태만 재생)</p>
+                    </div>
+                    <div class="menu-item-wrapper">
+                        <button onclick="loadContent('login_listen')">사연 보기 (채널 연결)</button>
+                        <p>로그인 후 승인된 사연을 <br> 순차/랜덤 재생합니다.</p>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'create_channel':
+            html = `
+                <h2 class="content-title">🛠️ 새 채널 만들기</h2>
+                <form id="createChannelForm">
+                    <div class="form-group">
+                        <label for="channelName">채널명:</label>
+                        <input type="text" id="channelName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherEmail">이메일:</label>
+                        <input type="email" id="teacherEmail" required>
+                        <p id="emailErrorInline" class="email-error-inline">유효하지 않은 이메일입니다. 주소를 다시 확인해 주세요.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacherPassword">비밀번호 (4자리):</label>
+                        <input type="password" id="teacherPassword" maxlength="4" required>
+                        <p id="passwordErrorInline" class="email-error-inline">
+                            비밀번호는 영어 소문자와 숫자로 된 4글자만 사용할 수 있어요.
+                        </p>
+                    </div>
+                    <button type="submit">채널 생성</button>
+                </form>
+                <p id="createStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
+            `;
+            break;
+
+        case 'login_manage_stories':
+        case 'login_listen':
+            html = `
+                <h2 class="content-title">🔒 사연 ${page === 'login_listen' ? '보기' : '관리'} 로그인</h2>
+                <form id="manageLoginForm">
+                    <div class="form-group">
+                        <label for="managerPin">채널 PIN 번호 (6자리):</label>
+                        <input type="text" id="managerPin" maxlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="managerPassword">비밀번호 (4자리):</label>
+                        <input type="password" id="managerPassword" maxlength="4" required>
+                    </div>
+                    <button type="submit">로그인 및 ${page === 'login_listen' ? '듣기' : '목록 보기'}</button>
+                </form>
+                <p id="manageLoginStatus" style="margin-top: 15px; color: var(--error-color); font-weight: bold;"></p>
+            `;
+            break;
+
+        case 'list_stories':
+            html = `<h2 class="content-title">📝 [${currentChannelName}] 사연 목록</h2>
+                    <div id="storyListArea"><p>사연 목록을 불러오는 중...</p></div>`;
+            setTimeout(fetchStoriesForManagement, 50);
+            break;
+
+        case 'qrcode':
+            html = `
+                <h2 class="content-title">접속용 QR 코드</h2>
+                <div id="qrCodeContainer">
+                    <div id="qrcode" class="qr-size"></div>
+                </div>
+            `;
+            setTimeout(generateQrCode, 100);
+            break;
+
+        default:
+            html = `
+                <h2 class="content-title">📻 라디오는 사연을 싣고 💌</h2>
+                <p>아래 다이얼을 눌러 원하는 기능을 선택하세요!</p>
+                <p>📝 사연 쓰기 : 사연을 적고 신청곡과 함께 보낼 수 있어요.</p>
+                <p>🔑 사연 관리 : 채널을 개설하고 사연을 불러올 수 있어요.</p>
+            `;
+            frequencyDisplay.textContent = '라디오는 사연을 싣고 - 환영합니다!';
+    }
+
+    mainContent.innerHTML = html;
+
+    if (page === 'listen') {
+        setTimeout(() => {
+            initFontToggleListeners();
+            applyTextSize(false);
+            const repeatBtn = document.getElementById('repeatScrollBtn');
+            if (repeatBtn) repeatBtn.classList.toggle('is-on', isRepeatScrolling);
+        }, 0);
+    }
+
+    if (page === 'write' || page === 'pin_entry') {
+        setupStoryFormListeners();
+    } else if (page === 'create_channel') {
+        document.getElementById('createChannelForm').addEventListener('submit', handleCreateChannel);
+    } else if (page === 'login_manage_stories' || page === 'login_listen') {
+        document.getElementById('manageLoginForm').addEventListener('submit', (e) => handleManageLogin(e, page));
+    }
+}
+
+function goBack() {
+    if (pageHistory.length > 1) {
+        pageHistory.pop();
+        const previousPage = pageHistory[pageHistory.length - 1];
+        loadContent(previousPage, true);
+    } else {
+        loadContent('welcome', true);
+    }
+}
+
+function showQrCode() {
+    loadContent('qrcode');
+    frequencyDisplay.textContent = '[QR CODE] - 접속 주파수';
+}
+function generateQrCode() {
+    const url = window.location.href.split('#')[0];
+    const qrcodeElement = document.getElementById('qrcode');
+    qrcodeElement.innerHTML = '';
+    new QRCode(qrcodeElement, {
+        text: url,
+        width: 160,
+        height: 160,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+}
+
+async function handleCreateChannel(e) {
+    e.preventDefault();
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const createStatus = document.getElementById('createStatus');
+    const emailInput = document.getElementById('teacherEmail');
+    const emailErrorInline = document.getElementById('emailErrorInline');
+    const passwordErrorInline = document.getElementById('passwordErrorInline');
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '생성 중...';
+    }
+
+    const channelName = document.getElementById('channelName').value.trim();
+    const teacherEmail = emailInput.value.trim();
+    const teacherPassword = document.getElementById('teacherPassword').value.trim();
+
+    if (!isEmailAllowed(teacherEmail)) {
+        emailErrorInline.textContent = '유효하지 않은 이메일입니다. 주소를 다시 확인해 주세요.';
+        emailErrorInline.classList.add('show');
+        createStatus.textContent = '';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '채널 생성';
+        }
+        return;
+    } else {
+        emailErrorInline.classList.remove('show');
+    }
+
+    if (!/^[a-z0-9]{4}$/.test(teacherPassword)) {
+        passwordErrorInline.textContent = '비밀번호는 영어 소문자와 숫자로 된 4글자만 사용할 수 있어요. 예: ab12, lov3, dj01';
+        passwordErrorInline.classList.add('show');
+        createStatus.textContent = '';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '채널 생성';
+        }
+        return;
+    } else {
+        passwordErrorInline.classList.remove('show');
+    }
+
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+
+    startLoadingAnimation('채널 생성 중');
+    createStatus.textContent = '✨ 채널 생성 중...';
+
+    const res = await callWorker('createChannel', {
+        channelName,
+        teacherEmail,
+        teacherPassword,
+        pin
+    });
+
+    stopLoadingAnimation();
+
+    if (res.success) {
+        const finalPassword = (res.password && String(res.password).trim() !== '')
+            ? res.password
+            : teacherPassword;
+
+        showModal(
+            `${channelName} 채널 생성 완료🎉`,
+            res.pin,
+            finalPassword,
+            res.emailFailed
+        );
+
+        if (res.emailFailed) {
+            createStatus.textContent = '채널은 생성됐지만 이메일 발송은 실패했어요. PIN을 꼭 저장해 두세요!';
+        } else {
+            createStatus.textContent = '';
+        }
+    } else {
+        createStatus.textContent = res.message;
+        createStatus.style.color = 'red';
+    }
+
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = '채널 생성';
+    }
+}
+
+function setupStoryFormListeners() {
+    const pinForm = document.getElementById('pinForm');
+    const storyFormContainer = document.getElementById('writeForm');
+    const storyForm = document.getElementById('storyForm');
+
+    pinForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pin = document.getElementById('pin').value;
+        const channelNameDisplay = document.getElementById('channelNameDisplay');
+        const submissionStatus = document.getElementById('submissionStatus');
+
+        startLoadingAnimation('PIN 검증 중');
+        submissionStatus.textContent = '';
+
+        const res = await callWorker('getChannelInfoByPin', { pin });
+
+        stopLoadingAnimation();
+
+        if (res.success) {
+            currentChannelPin = pin;
+            currentChannelName = res.channelName;
+
+            pinForm.style.display = 'none';
+            storyFormContainer.style.display = 'block';
+            frequencyDisplay.textContent = `[${currentChannelName}] 주파수 일치!`;
+
+            channelNameDisplay.textContent = `[${currentChannelName}]에 사연 보내기`;
+
+            if (isStorySubmitted) {
+                storyForm.style.display = 'none';
+                submissionStatus.textContent = '사연은 한 번만 보낼 수 있습니다.';
+            } else {
+                storyForm.style.display = 'block';
+                submissionStatus.textContent = '';
+            }
+        } else {
+            submissionStatus.textContent = `오류: ${res.message}`;
+            currentChannelPin = null;
+            currentChannelName = null;
+        }
+    });
+
+    storyForm.addEventListener('submit', handleStorySubmit);
+}
+
+async function handleStorySubmit(e) {
+    e.preventDefault();
+
+    if (isStorySubmitted || !currentChannelPin) {
+        alert('채널 인증이 필요하거나 이미 사연을 보냈습니다. 💡');
+        return;
+    }
+
+    const form = document.getElementById('storyForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '보내는 중...';
+    }
+
+    const name = document.getElementById('storyName').value;
+    const content = document.getElementById('storyContent').value;
+    const url = document.getElementById('storyUrl').value;
+    const statusDiv = document.getElementById('submissionStatus');
+
+    startLoadingAnimation('사연 보내는 중');
+    statusDiv.textContent = '보내는 중... 잠시만 기다려주세요.';
+
+    const res = await callWorker('submitStory', {
+        name: name,
+        content: content,
+        youtubeUrl: url,
+        pin: currentChannelPin
+    });
+
+    stopLoadingAnimation();
+
+    if (res.success) {
+        statusDiv.textContent = '✅ 사연을 보냈습니다! (승인 대기 중)';
+        isStorySubmitted = true;
+        form.style.display = 'none';
+    } else {
+        statusDiv.textContent = `오류 발생: ${res.message}`;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '사연 보내기';
+        }
+    }
+}
+
+async function handleManageLogin(e, loginType) {
+    e.preventDefault();
+    const pin = document.getElementById('managerPin').value;
+    const password = document.getElementById('managerPassword').value;
+    const loginStatus = document.getElementById('manageLoginStatus');
+
+    startLoadingAnimation('로그인 중');
+    loginStatus.textContent = '로그인 중...';
+
+    const authRes = await callWorker('getAllStories', { pin, password });
+
+    stopLoadingAnimation();
+
+    if (authRes.success || (authRes.message && authRes.message.includes('도착한 사연이 없습니다'))) {
+        const channelInfo = await callWorker('getChannelInfoByPin', { pin });
+        if (channelInfo.success) {
+            currentChannelName = channelInfo.channelName;
+            currentChannelPin = pin;
+            managerPassword = password;
+            loginStatus.textContent = `로그인 성공! [${currentChannelName}] 채널 연결 완료`;
+            setTimeout(() => {
+                if (loginType === 'login_listen') {
+                    loadContent('listen');
+                } else {
+                    loadContent('list_stories');
+                }
+            }, 500);
+        } else {
+            loginStatus.textContent = `인증 실패: ${channelInfo.message}`;
+        }
+    } else {
+        loginStatus.textContent = `인증 실패: ${authRes.message}`;
+    }
+}
+
+async function fetchStoriesForManagement() {
+    if (!currentChannelPin || !managerPassword) {
+        document.getElementById('storyListArea').innerHTML = '<p style="color: red;">인증 정보가 없습니다. 다시 로그인해 주세요.</p>';
+        return;
+    }
+
+    const storyListArea = document.getElementById('storyListArea');
+    storyListArea.innerHTML = `<p>사연 목록을 서버에서 불러오는 중...</p>`;
+
+    startLoadingAnimation('사연 목록 로드 중');
+
+    const res = await callWorker('getAllStories', {
+        pin: currentChannelPin,
+        password: managerPassword
+    });
+
+    stopLoadingAnimation();
+
+    if (res.success) {
+        const stories = res.stories;
+        if (stories.length === 0) {
+            storyListArea.innerHTML = `<p>아직 도착한 사연이 없습니다. 📝</p>`;
+            return;
+        }
+
+        let tableHtml = `
+            <form id="bulkUpdateForm">
+            <table class="story-table">
+                <thead>
+                    <tr>
+                        <th>날짜</th>
+                        <th>이름</th>
+                        <th><span title="마우스를 올리면 전체 내용이 보입니다.">사연 (앞부분 일부)</span></th>
+                        <th>URL</th>
+                        <th>상태</th>
+                        <th>승인/거절</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        stories.forEach(story => {
+            let statusText = story.status;
+            let statusClass;
+            statusClass = `status-${story.status.toLowerCase()}`;
+            if (story.isPlayed) {
+                 statusText += ' (완료)';
+            }
+
+
+            const contentSnippet = story.content.length > 15 ? story.content.substring(0, 15) + '...' : story.content;
+            const formattedDate = new Date(story.timestamp).toLocaleDateString('ko-KR');
+
+            tableHtml += `
+                <tr>
+                    <td>${formattedDate}</td>
+                    <td>${story.name}</td>
+                    <td title="${story.content}" class="story-content-cell">${contentSnippet}</td>
+                    <td><a href="${story.youtubeUrl}" target="_blank">링크</a></td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td>
+                        <select name="status_${story.rowNum}" data-row="${story.rowNum}" class="status-select">
+                            <option value="${story.status}" selected disabled>${story.status}</option>
+                            <option value="Approved" ${story.status === 'Approved' ? 'selected' : ''}>승인 (Approved)</option>
+                            <option value="Rejected" ${story.status === 'Rejected' ? 'selected' : ''}>거절 (Rejected)</option>
+                            <option value="Pending" ${story.status === 'Pending' ? 'selected' : ''}>대기 (Pending)</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableHtml += `</tbody></table>
+                        <button type="submit" class="button-group" style="margin-top: 15px; background-color: var(--dark-wood); color: var(--dial-color);">일괄 저장 (상태 변경)</button>
+                        </form>`;
+
+        storyListArea.innerHTML = tableHtml;
+        document.getElementById('bulkUpdateForm').addEventListener('submit', handleBulkSave);
+
+    } else {
+        storyListArea.innerHTML = `<p style="color: red;">사연 목록을 불러오지 못했습니다: ${res.message}</p>`;
+    }
+}
+
+async function handleBulkSave(e) {
+    e.preventDefault();
+    if (!currentChannelPin || !managerPassword) {
+        alert('채널 인증 정보가 유효하지 않습니다.');
+        return;
+    }
+    if (!confirm('변경된 상태를 서버에 일괄 저장하시겠습니까?')) return;
+
+    const form = e.target;
+    const selectElements = form.querySelectorAll('.status-select');
+    const updates = [];
+    let isChanged = false;
+
+    selectElements.forEach(select => {
+        const initialStatus = select.options[0].value;
+        const newStatus = select.value;
+        if (initialStatus !== newStatus) {
+            updates.push({
+                rowNum: parseInt(select.dataset.row),
+                newStatus: newStatus
+            });
+            isChanged = true;
+        }
+    });
+
+    if (!isChanged) {
+        alert('변경된 내용이 없습니다.');
+        return;
+    }
+
+    const saveButton = form.querySelector('button[type="submit"]');
+    saveButton.textContent = '저장 중...';
+    saveButton.disabled = true;
+
+    const res = await callWorker('bulkUpdateStories', {
+        pin: currentChannelPin,
+        password: managerPassword,
+        updates: updates
+    });
+
+    if (res.success) {
+        alert(res.message);
+    } else {
+        alert(`일괄 저장 실패: ${res.message}`);
+    }
+    fetchStoriesForManagement();
+}
+
+async function playStories(mode) {
+    if (!currentChannelPin) {
+        alert('채널 정보가 유효하지 않습니다.');
+        return;
+    }
+
+    const storiesWereEmpty = storyData.length === 0 && shuffledStoryData.length === 0;
+    const modeIsChanging = playMode !== mode;
+    
+    // 1. 초기 로드 또는 목록 소진 시: 서버에서 새 목록 가져오기
+    if (storiesWereEmpty) {
+        const playerArea = document.querySelector('#mainContent .scroll-text-box #playerArea');
+        if (playerArea) {
+            playerArea.innerHTML = `<p>사연을 불러오는 중...</p>`;
+        }
+        
+        startLoadingAnimation('사연을 불러오는 중');
+
+        const allStoriesRes = await callWorker('getAllStories', { pin: currentChannelPin, password: managerPassword });
+        stopLoadingAnimation();
+
+        if (!allStoriesRes.success) {
+            mainContent.innerHTML = `<p style="color: red;">사연을 불러오지 못했습니다: ${allStoriesRes.message}</p>`;
+            return;
+        }
+
+        const stories = allStoriesRes.stories || [];
+        const approvedStories = stories.filter(s => s.status === 'Approved');
+        const pendingStories = stories.filter(s => s.status === 'Pending');
+        
+        const unplayedApprovedWithUrl = approvedStories.filter(s => !s.isPlayed && s.youtubeUrl && getYoutubeVideoId(s.youtubeUrl));
+
+        if (approvedStories.length === 0) {
+            mainContent.innerHTML = `<h2 class="content-title">🎶 사연 읽기</h2><p>현재 승인된 사연이 없습니다. 관리자 페이지에서 사연을 승인해 주세요.</p>`;
+            frequencyDisplay.textContent = '승인된 사연 없음';
+            return;
+        }
+
+        if (unplayedApprovedWithUrl.length === 0) {
+            const msg = pendingStories.length > 0 
+                ? `승인된 사연이 모두 재생되었습니다. 대기 중인 사연 (${pendingStories.length}개)이 있습니다.`
+                : `모든 사연을 재생했습니다. 🎉 채널은 자정에 자동으로 삭제됩니다.`;
+            mainContent.innerHTML = `<h2 class="content-title">🎶 사연 읽기</h2><p>${msg}</p>`;
+            frequencyDisplay.textContent = pendingStories.length > 0 ? `대기 사연 (${pendingStories.length}) 확인 필요` : '모든 사연 재생 완료';
+            return;
+        }
+
+        approvedUnplayedCount = unplayedApprovedWithUrl.length; 
+        originalTotalStories = approvedStories.length;
+        currentPlayOrder = 0; 
+        
+        // 두 리스트를 모두 초기화/정렬/셔플합니다. (같은 내용을 가짐)
+        storyData = unplayedApprovedWithUrl.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // 순차 정렬
+        shuffledStoryData = shuffleArray([...storyData]); // 랜덤 셔플
+    } 
+    
+    // 2. 모드 전환 시: 남은 곡들로 리스트 순서만 재구성
+    else if (modeIsChanging) {
+        // 현재 남아있는 곡들의 목록을 가져옵니다. (두 리스트는 현재 동기화된 상태이므로 아무거나 사용 가능)
+        const currentRemaining = playMode === 'sequential' ? storyData : shuffledStoryData;
+        
+        if (mode === 'sequential') {
+            // 순차 모드로 전환: 현재 남아있는 곡들을 시간 순으로 재정렬
+            storyData = [...currentRemaining].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            shuffledStoryData = [...currentRemaining]; 
+        } else { // mode === 'random'
+            // 랜덤 모드로 전환: 현재 남아있는 곡들을 셔플
+            shuffledStoryData = shuffleArray([...currentRemaining]);
+            storyData = [...currentRemaining]; 
+        }
+    }
+
+    playMode = mode;
+    currentStoryIndex = -1; 
+    
+    // 재생 시작
+    loadContent('listen', true);
+
+    setTimeout(() => {
+        initFontToggleListeners();
+        applyTextSize(false);
+        const repeatBtn = document.getElementById('repeatScrollBtn');
+        if (repeatBtn) {
+            repeatBtn.classList.toggle('is-on', isRepeatScrolling);
+        }
+        
+        if (player) {
+             playNextStory();
+        } else {
+             loadYoutubeAPI();
+        }
+    }, 0);
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function loadYoutubeAPI() {
+    if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+    } else {
+        onYouTubeIframeAPIReady();
+    }
+}
+
+function onYouTubeIframeAPIReady() {
+    const youtubeBox = document.getElementById('youtubePlayer');
+    if (!youtubeBox) {
+        console.error("YouTube Player DOM element not found.");
+        return;
+    }
+
+    player = new YT.Player('youtubePlayer', {
+        height: '100%',
+        width: '100%',
+        playerVars: {
+            'rel': 0,
+            'modestbranding': 1,
+            'autoplay': 1,
+            'disablekb': 1,
+            'iv_load_policy': 3,
+            'showinfo': 0,
+            'cc_load_policy': 0
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
+}
+
+function onPlayerReady() {
+    playNextStory();
+}
+
+function onPlayerStateChange(event) {
+    if (event.data === 1) { 
+        if (currentStoryIndex !== -1) {
+            const currentList = playMode === 'sequential' ? storyData : shuffledStoryData;
+            const story = currentList[currentStoryIndex];
+
+            const now = Date.now();
+            if (lastStartedRowNum !== story.rowNum || (now - lastStartedStamp) > 2000) {
+                lastStartedRowNum = story.rowNum;
+                lastStartedStamp = now;
+
+                (async () => {
+                    try {
+                        await callWorker('setStoryStarted', {
+                            pin: currentChannelPin,
+                            rowNum: story.rowNum,
+                            startedAt: now
+                        });
+                    } catch (e) {
+                        console.warn('재생 시작 체크 실패(무시):', e);
+                    }
+                })();
+            }
+
+            const storyInfoElement = document.getElementById('currentStoryInfo');
+            if (storyInfoElement) {
+                storyInfoElement.textContent = `${originalTotalStories}개 사연 중 ${currentPlayOrder}번째 (남은 곡: ${storyData.length})`;
+            }
+        }
+    }
+
+    if (event.data === 0) { 
+        if (currentStoryIndex !== -1) {
+            const currentList = playMode === 'sequential' ? storyData : shuffledStoryData;
+            const story = currentList[currentStoryIndex];
+
+            callWorker('setStoryPlayed', {
+                pin: currentChannelPin,
+                rowNum: story.rowNum
+            }).catch(err => {
+                console.warn('[Playback] setStoryPlayed failed (ignored):', err);
+            });
+            
+            const rowNumToRemove = story.rowNum;
+
+            const removeByRowNum = (list, rowNum) => {
+                const index = list.findIndex(s => s.rowNum === rowNum);
+                if (index !== -1) {
+                    list.splice(index, 1);
+                }
+            };
+            
+            removeByRowNum(storyData, rowNumToRemove);
+            removeByRowNum(shuffledStoryData, rowNumToRemove);
+            
+            approvedUnplayedCount = storyData.length; 
+            currentStoryIndex = -1;
+
+            playNextStory();
+        } else {
+            playNextStory();
+        }
+    }
+}
+
+function playNextStory() {
+    const storyInfoElement = document.getElementById('currentStoryInfo');
+    const playerArea = document.getElementById('playerArea');
+    
+    const currentList = playMode === 'sequential' ? storyData : shuffledStoryData;
+
+    if (currentList.length === 0) {
+        if (playerArea) {
+             playerArea.innerHTML = `<p>다음 사연이 없습니다. 다시 재생 버튼을 눌러 상태를 갱신해 주세요.</p>`;
+        }
+        frequencyDisplay.textContent = '재생 목록 종료';
+        if (storyInfoElement) {
+             storyInfoElement.textContent = `${originalTotalStories}개 중 ${originalTotalStories}번째 (완료)`;
+        }
+        if (player) player.stopVideo();
+        
+        storyData = [];
+        shuffledStoryData = [];
+        approvedUnplayedCount = 0;
+        currentPlayOrder = originalTotalStories; 
+        return;
+    }
+
+    currentStoryIndex = 0; 
+    currentPlayOrder = originalTotalStories - currentList.length + 1;
+
+    const story = currentList[currentStoryIndex];
+    const videoId = getYoutubeVideoId(story.youtubeUrl);
+
+    if (videoId && player) {
+        player.loadVideoById(videoId);
+        frequencyDisplay.textContent = `ON AIR: ${story.name} 님의 사연 (채널: ${currentChannelName})`;
+
+        const scrollingText = document.getElementById('scrollingText');
+        scrollingText.textContent = `[${story.name} 님의 사연]\n${story.content}`;
+
+        if (storyInfoElement) {
+            storyInfoElement.textContent = `${originalTotalStories}개 사연 중 ${currentPlayOrder}번째 (남은 곡: ${currentList.length})`;
+        }
+        
+        if (playerArea) {
+             playerArea.innerHTML = ``;
+        }
+
+        restartCurrentScrolling();
+    } else {
+        console.error('유효하지 않은 YouTube URL 또는 ID: ', story.youtubeUrl);
+        currentPlayOrder = originalTotalStories - currentList.length; 
+        
+        const removeByRowNum = (list, rowNum) => {
+            const index = list.findIndex(s => s.rowNum === rowNum);
+            if (index !== -1) {
+                list.splice(index, 1);
+            }
+        };
+
+        const storyToRemove = currentList[currentStoryIndex];
+        removeByRowNum(storyData, storyToRemove.rowNum);
+        removeByRowNum(shuffledStoryData, storyToRemove.rowNum);
+        approvedUnplayedCount = storyData.length;
+        
+        currentStoryIndex = -1;
+        playNextStory();
+    }
+}
+
+function toggleRepeatScrolling(btn) {
+    isRepeatScrolling = !isRepeatScrolling;
+    if (btn) {
+        btn.classList.toggle('is-on', isRepeatScrolling);
+    }
+    if (isRepeatScrolling) {
+        restartCurrentScrolling();
+    } else {
+        if (scrollWatchTimer) {
+            clearInterval(scrollWatchTimer);
+            scrollWatchTimer = null;
+        }
+    }
+}
+
+function restartCurrentScrolling() {
+    const el = document.getElementById('scrollingText');
+    if (!el) return;
+
+    el.style.animation = 'none';
+    el.style.top = '100%';
+    el.style.animationDelay = '0s';
+
+    setTimeout(() => {
+        el.classList.remove('size-small', 'size-large');
+        el.classList.add(textSizeMode === 'large' ? 'size-large' : 'size-small');
+
+        setScrollAnimationDuration(el);
+        applyTextSize(false);
+
+        startScrollWatcher();
+    }, 50);
+}
+
+function setScrollAnimationDuration(el) {
+    const container = el.parentElement;
+    if (!container) return;
+
+    const boxHeight = container.getBoundingClientRect().height;
+    const textHeight = el.getBoundingClientRect().height;
+
+    let scrollDistance = textHeight + boxHeight + 40; 
+
+    let durationSec = scrollDistance / SCROLL_SPEED;
+    if (durationSec < MIN_SCROLL_SEC) durationSec = MIN_SCROLL_SEC;
+    if (durationSec > MAX_SCROLL_SEC) durationSec = MAX_SCROLL_SEC;
+
+    el.style.animation = `scrollUp ${durationSec}s linear forwards`;
+}
+
+function startScrollWatcher() {
+    if (scrollWatchTimer) {
+        clearInterval(scrollWatchTimer);
+        scrollWatchTimer = null;
+    }
+
+    const el = document.getElementById('scrollingText');
+    if (!el) return;
+
+    scrollWatchTimer = setInterval(() => {
+        if (!isRepeatScrolling) {
+            clearInterval(scrollWatchTimer);
+            scrollWatchTimer = null;
+            return;
+        }
+        const container = el.parentElement;
+        if (!container) return;
+
+        const elRect = el.getBoundingClientRect();
+        const boxRect = container.getBoundingClientRect();
+
+        const isOut = elRect.bottom < boxRect.top;
+
+        if (isOut) {
+            clearInterval(scrollWatchTimer);
+            scrollWatchTimer = null;
+            setTimeout(() => {
+                if (isRepeatScrolling) {
+                    restartCurrentScrolling();
+                }
+            }, 1200); 
+        }
+    }, 400);
+}
+
+document.addEventListener('animationend', function (e) {
+    if (e.target && e.target.id === 'scrollingText') {
+        if (isRepeatScrolling) {
+            setTimeout(() => {
+                if (isRepeatScrolling) {
+                    restartCurrentScrolling();
+                }
+            }, 1200);
+        }
+    }
+});
+
+function getYoutubeVideoId(url) {
+    if (!url) return null;
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|\w+\/|watch\?v=)|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    try {
+        const u = new URL(url, window.location.origin);
+        const v = u.searchParams.get('v');
+        if (v && v.length === 11) return v;
+    } catch (e) {}
+    return null;
+}
+
+let searchResultsData = [];
+
+async function handleSearch() {
+    const queryInput = document.getElementById('searchQuery');
+    const query = queryInput.value.trim();
+    const resultsContainer = document.getElementById('searchResults');
+    const storyUrlInput = document.getElementById('storyUrl');
+
+    if (query.length < 2) {
+        resultsContainer.innerHTML = '<li>검색어를 두 글자 이상 입력해주세요.</li>';
+        return;
+    }
+
+    resultsContainer.innerHTML = '<li>검색 중입니다...</li>';
+
+    startLoadingAnimation('YouTube 검색 중');
+
+    const res = await callWorker('searchYoutube', { query: query });
+
+    stopLoadingAnimation();
+
+    if (res.success && res.results.length > 0) {
+        searchResultsData = res.results;
+        let html = '';
+        res.results.forEach((item, index) => {
+            html += `<li onclick="selectSong(${index})">🎵 ${item.title}</li>`;
+        });
+        resultsContainer.innerHTML = html;
+    } else {
+        resultsContainer.innerHTML = `<li>검색 결과가 없습니다. URL을 직접 입력하거나 다시 시도하세요.</li>`;
+        storyUrlInput.value = '';
+    }
+}
+
+function selectSong(index) {
+    const selected = searchResultsData[index];
+    const storyUrlInput = document.getElementById('storyUrl');
+    const resultsContainer = document.getElementById('searchResults');
+    storyUrlInput.value = selected.url;
+    resultsContainer.innerHTML = `<li>✅ ${selected.title} 선택 완료!</li>`;
+}
+
+window.onload = () => {
+    loadContent('welcome');
+};
+</script>
+</body>
+</html>
